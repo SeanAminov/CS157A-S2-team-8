@@ -9,9 +9,9 @@ public class MysqlCon {
             // 2. Connect to the database
             // TODO: Change "Wu" to your actual database name and put your MySQL password
             Connection con = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/Nguyen?autoReconnect=true&useSSL=false", 
+                "jdbc:mysql://localhost:3306/xxx?autoReconnect=true&useSSL=false", 
                 "root", 
-                "Blue1312"
+                "xxx"
             );
 
             // 3. Execute a query to test the connection
