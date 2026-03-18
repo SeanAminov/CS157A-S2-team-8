@@ -391,7 +391,7 @@ CREATE TABLE `Users` (
   `user_id` int NOT NULL AUTO_INCREMENT,
   `role` varchar(45) NOT NULL,
   `email` varchar(45) NOT NULL,
-  `password_hash` varchar(45) NOT NULL,
+  `password_hash` varchar(60) NOT NULL,
   `date_created` varchar(45) NOT NULL,
   `major_id` int DEFAULT NULL,
   PRIMARY KEY (`user_id`),

@@ -8,6 +8,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import org.mindrot.jbcrypt.BCrypt;
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -37,16 +39,24 @@ public class LoginServlet extends HttpServlet {
 
         // NOTE: The DB stores plain-text hashes for sample data.
         // In production replace this with a proper password hash check (e.g. BCrypt).
-        String sql = "SELECT user_id, email, role FROM Users WHERE email = ? AND password_hash = ?";
+        // String sql = "SELECT user_id, email, role FROM Users WHERE email = ? AND password_hash = ?";
+        String findPwHashSql = "SELECT user_id, email, role, password_hash FROM Users WHERE email = ?";
 
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+            PreparedStatement ps = conn.prepareStatement(findPwHashSql)) {
 
             ps.setString(1, email.trim());
-            ps.setString(2, password);   // swap for hash comparison when ready
+            
+            
+            
+//            String hashed_password = BCrypt.hashpw(password,  BCrypt.gensalt());
+//            
+//            ps.setString(2, hashed_password);   // swap for hash comparison when ready
 
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
+                if (rs.next() & BCrypt.checkpw(password, rs.getString("password_hash"))) {
+                	
+                	
                     HttpSession session = req.getSession(true);
                     session.setAttribute("userId",    rs.getInt("user_id"));
                     session.setAttribute("userEmail", rs.getString("email"));
@@ -57,6 +67,8 @@ public class LoginServlet extends HttpServlet {
                     req.getRequestDispatcher("login.jsp").forward(req, resp);
                 }
             }
+            
+            
 
         } catch (SQLException e) {
             req.setAttribute("error", "Database error: " + e.getMessage());

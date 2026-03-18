@@ -14,6 +14,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 
+import org.mindrot.jbcrypt.BCrypt;
+
 public class RegisterServlet extends HttpServlet {
 
     @Override
@@ -55,7 +57,8 @@ public class RegisterServlet extends HttpServlet {
 
         String checkSql  = "SELECT user_id FROM Users WHERE email = ?";
         String insertSql = "INSERT INTO Users (role, email, password_hash, date_created, major_id) VALUES ('student', ?, ?, ?, ?)";
-
+        
+        
         try (Connection conn = DBConnection.getConnection()) {
 
             // Check for duplicate email
@@ -74,7 +77,10 @@ public class RegisterServlet extends HttpServlet {
             // NOTE: store a proper hash here in production (e.g. BCrypt)
             try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
                 ps.setString(1, email.trim());
-                ps.setString(2, password);   // swap for hashed password when ready
+                
+                String hashed_password = BCrypt.hashpw(password, BCrypt.gensalt());
+                
+                ps.setString(2, hashed_password);   // swap for hashed password when ready
                 ps.setString(3, LocalDate.now().toString());
                 if (majorId != null) {
                     ps.setInt(4, majorId);
