@@ -102,6 +102,7 @@ function parseInstructorName(instructorRaw) {
  * once you have richer data from RateMyProfessors.
  */
 async function getOrCreateProfessor(db, firstName, lastName) {
+  // Base case: if professor is "To be Announced", do NOT create professor entry
   if (firstName === "To be" && lastName === "Announced") {
     return { firstName: "Unknown", lastName: "Unknown" };
   }
@@ -185,12 +186,16 @@ async function fetchCourses() {
       if (!sectionNum || !daysTime) return;
 
       // Parse days and time range out of daysTime string
+      // HTML format: "MoWe 6:00PM - 7:15PM" (spaces around dash)
       const timeMatch = daysTime.match(
-        /([A-Za-z]+)\s+([\d:]+[AP]M)-([\d:]+[AP]M)/i,
+        /([A-Za-z]+)\s+([\d:]+[AP]M)\s*-\s*([\d:]+[AP]M)/i,
       );
       const days = timeMatch ? timeMatch[1] : daysTime;
       const startTime = timeMatch ? to24h(timeMatch[2]) : null;
       const endTime = timeMatch ? to24h(timeMatch[3]) : null;
+
+      // Skip sections with no scheduled time (TBA, online async, etc.)
+      if (!startTime) return;
 
       const { firstName: profFirstName, lastName: profLastName } =
         parseInstructorName(instructor);
