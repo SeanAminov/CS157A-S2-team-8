@@ -132,15 +132,15 @@ async function fetchRatings() {
         prof.last_name,
       );
 
-      if (!teacher) {
+      if (teacher === 0) {
         console.log(`No SJSU match found for ${fullName}`);
       } else {
         const { avgRating } = teacher;
         await db.execute(
           `UPDATE Professors SET rating = ? WHERE professor_id = ?`,
-          [avgRating, prof.professor_id],
+          [avgRating ?? null, prof.professor_id],
         );
-        console.log(`Updated ${fullName}: rating=${avgRating}`);
+        console.log(`Updated ${fullName}: rating=${avgRating ?? null}`);
       }
     } catch (err) {
       console.error(`Failed to fetch rating for ${fullName}:`, err.message);
