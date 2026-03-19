@@ -3,7 +3,6 @@ const { getDb } = require("./db");
 
 const RMP_GRAPHQL_URL = "https://www.ratemyprofessors.com/graphql";
 const SJSU_SCHOOL_ID = "U2Nob29sLTg4MQ==";
-const SJCC_SCHOOL_ID = "U2Nob29sLTEyMzU=";
 
 const SEARCH_QUERY = `
   query TeacherSearchResultsPageQuery(
@@ -84,9 +83,9 @@ async function searchProfessorAtSJSU(name) {
       query: SEARCH_QUERY,
       operationName: "TeacherSearchResultsPageQuery",
       variables: {
-        query: { text: name, schoolID: "", fallback: true },
-        schoolID: "",
-        includeSchoolFilter: false,
+        query: { text: name, schoolID: SJSU_SCHOOL_ID, fallback: false },
+        schoolID: SJSU_SCHOOL_ID,
+        includeSchoolFilter: true,
       },
     },
     {
@@ -103,16 +102,8 @@ async function searchProfessorAtSJSU(name) {
 
   const edges = data?.data?.search?.teachers?.edges ?? [];
 
-  // Filter to only SJSU professors by school ID or name
-  const sjsuMatch = edges.find(
-    ({ node }) =>
-      node.school?.id === SJSU_SCHOOL_ID ||
-      node.school?.id === SJCC_SCHOOL_ID ||
-      node.school?.name?.toLowerCase().includes("san jose state") ||
-      node.school?.name?.toLowerCase().includes("san jose city college"),
-  );
-
-  return sjsuMatch ? sjsuMatch.node : null;
+  // RMP already filters by SJSU school ID, so take the first result
+  return edges[0]?.node ?? null;
 }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -144,7 +135,7 @@ async function fetchRatings() {
     }
 
     // Pause between requests to avoid rate limiting
-    await delay(1500);
+    await delay(1000);
   }
 }
 
