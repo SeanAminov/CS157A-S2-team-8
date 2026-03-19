@@ -57,12 +57,55 @@ function to24h(timeStr) {
   return `${String(h).padStart(2, "0")}:${m}`;
 }
 
+function parseInstructorName(instructorRaw) {
+  // Split on newlines first (before collapsing whitespace) so we can
+  // take just the first meaningful name when the cell has multiple lines.
+  const firstLine =
+    String(instructorRaw ?? "")
+      .split("\n")
+      .map((l) => l.replace(/\s+/g, " ").trim())
+      // Drop the PeopleSoft cell label and known non-name placeholders
+      .filter(
+        (l) =>
+          l &&
+          !/^instructor$/i.test(l) &&
+          !/^(to be announced|tba|staff)$/i.test(l),
+      )[0] ?? "";
+
+  if (!firstLine) return { firstName: "Unknown", lastName: "Unknown" };
+
+  // Strip a leading "Instructor" prefix that gets merged when there is no
+  // whitespace between the label and the name (e.g. "InstructorRob Ashcom")
+  const name = firstLine.replace(/^Instructor\s*/i, "").trim();
+
+  // "Last, First [Middle]" format
+  const commaMatch = name.match(/^([^,]+),\s*(.+)$/);
+  if (commaMatch) {
+    return {
+      lastName: commaMatch[1].trim(),
+      firstName: commaMatch[2].trim(),
+    };
+  }
+
+  // "First [Middle] Last" format (what SJSU PeopleSoft actually uses)
+  const parts = name.split(" ").filter(Boolean);
+  if (parts.length === 1) return { firstName: "Unknown", lastName: parts[0] };
+  return {
+    firstName: parts.slice(0, -1).join(" "),
+    lastName: parts[parts.length - 1],
+  };
+}
+
 /**
  * Gets or inserts a professor by name, returns professor_id.
  * department_id defaults to 1 (Computer Science) — update as needed
  * once you have richer data from RateMyProfessors.
  */
 async function getOrCreateProfessor(db, firstName, lastName) {
+  if (firstName === "To be" && lastName === "Announced") {
+    return { firstName: "Unknown", lastName: "Unknown" };
+  }
+
   const [rows] = await db.execute(
     "SELECT professor_id FROM Professors WHERE first_name = ? AND last_name = ?",
     [firstName, lastName],
@@ -135,7 +178,7 @@ async function fetchCourses() {
       const sectionNum = $(cells[0]).text().trim();
       const daysTime = $(cells[2]).text().trim(); // e.g. "MoWeFr 9:00AM-9:50AM"
       const room = $(cells[3]).text().trim();
-      const instructor = $(cells[4]).text().trim(); // e.g. "Smith, John"
+      const instructor = $(cells[4]).text(); // keep newlines so parseInstructorName can split on them
       const units = $(cells[7]).text().trim();
       const format = $(cells[8]).text().trim(); // e.g. "In Person"
 
@@ -149,14 +192,8 @@ async function fetchCourses() {
       const startTime = timeMatch ? to24h(timeMatch[2]) : null;
       const endTime = timeMatch ? to24h(timeMatch[3]) : null;
 
-      // Parse instructor "Last, First" format
-      let profFirstName = "Unknown";
-      let profLastName = instructor;
-      const nameMatch = instructor.match(/^([^,]+),\s*(.+)$/);
-      if (nameMatch) {
-        profLastName = nameMatch[1].trim();
-        profFirstName = nameMatch[2].trim();
-      }
+      const { firstName: profFirstName, lastName: profLastName } =
+        parseInstructorName(instructor);
 
       try {
         const courseId = await getOrCreateCourse(db, courseCode, courseName);
