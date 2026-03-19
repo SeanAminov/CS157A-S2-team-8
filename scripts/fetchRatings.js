@@ -138,9 +138,9 @@ async function fetchRatings() {
         const { avgRating } = teacher;
         await db.execute(
           `UPDATE Professors SET rating = ? WHERE professor_id = ?`,
-          [avgRating ?? null, prof.professor_id],
+          [avgRating ?? 0, prof.professor_id],
         );
-        console.log(`Updated ${fullName}: rating=${avgRating ?? null}`);
+        console.log(`Updated ${fullName}: rating=${avgRating ?? 0}`);
       }
     } catch (err) {
       console.error(`Failed to fetch rating for ${fullName}:`, err.message);
