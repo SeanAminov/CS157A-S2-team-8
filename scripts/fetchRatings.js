@@ -2,35 +2,120 @@ const axios = require("axios");
 const { getDb } = require("./db");
 
 const RMP_GRAPHQL_URL = "https://www.ratemyprofessors.com/graphql";
-const RMP_AUTH = "Basic dGVzdDp0ZXN0"; // RMP's public static token
+const SJSU_SCHOOL_ID = "U2Nob29sLTg4MQ==";
+const SJCC_SCHOOL_ID = "U2Nob29sLTEyMzU=";
 
-async function searchProfessor(name) {
+const SEARCH_QUERY = `
+  query TeacherSearchResultsPageQuery(
+    $query: TeacherSearchQuery!
+    $schoolID: ID
+    $includeSchoolFilter: Boolean!
+  ) {
+    search: newSearch {
+      ...TeacherSearchPagination_search_2MvZSr
+    }
+    school: node(id: $schoolID) @include(if: $includeSchoolFilter) {
+      __typename
+      ... on School {
+        name
+      }
+      id
+    }
+  }
+
+  fragment CardFeedback_teacher on Teacher {
+    wouldTakeAgainPercent
+    avgDifficulty
+  }
+
+  fragment CardName_teacher on Teacher {
+    firstName
+    lastName
+  }
+
+  fragment CardSchool_teacher on Teacher {
+    department
+    school {
+      name
+      id
+    }
+  }
+
+  fragment TeacherBookmark_teacher on Teacher {
+    id
+    isSaved
+  }
+
+  fragment TeacherCard_teacher on Teacher {
+    id
+    legacyId
+    avgRating
+    numRatings
+    ...CardFeedback_teacher
+    ...CardSchool_teacher
+    ...CardName_teacher
+    ...TeacherBookmark_teacher
+  }
+
+  fragment TeacherSearchPagination_search_2MvZSr on newSearch {
+    teachers(query: $query, first: 5, after: "") {
+      didFallback
+      edges {
+        cursor
+        node {
+          ...TeacherCard_teacher
+          id
+          __typename
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      resultCount
+    }
+  }
+`;
+
+async function searchProfessorAtSJSU(name) {
   const { data } = await axios.post(
     RMP_GRAPHQL_URL,
     {
-      query: `
-        query SearchTeacher($name: String!) {
-          newSearch {
-            teachers(query: $name, schoolID: "U2Nob29sLTExMQ==") {
-              edges {
-                node {
-                  firstName
-                  lastName
-                  avgRating
-                  numRatings
-                  department
-                }
-              }
-            }
-          }
-        }
-      `,
-      variables: { name },
+      query: SEARCH_QUERY,
+      operationName: "TeacherSearchResultsPageQuery",
+      variables: {
+        query: { text: name, schoolID: "", fallback: true },
+        schoolID: "",
+        includeSchoolFilter: false,
+      },
     },
-    { headers: { Authorization: RMP_AUTH } },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "null",
+        Origin: "https://www.ratemyprofessors.com",
+        Referer: `https://www.ratemyprofessors.com/search/professors/?q=${encodeURIComponent(name)}`,
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      },
+    },
   );
-  return data?.data?.newSearch?.teachers?.edges ?? [];
+
+  const edges = data?.data?.search?.teachers?.edges ?? [];
+
+  // Filter to only SJSU professors by school ID or name
+  const sjsuMatch = edges.find(
+    ({ node }) =>
+      node.school?.id === SJSU_SCHOOL_ID ||
+      node.school?.id === SJCC_SCHOOL_ID ||
+      node.school?.name?.toLowerCase().includes("san jose state") ||
+      node.school?.name?.toLowerCase().includes("san jose city college"),
+  );
+
+  return sjsuMatch ? sjsuMatch.node : null;
 }
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function fetchRatings() {
   const db = await getDb();
@@ -39,17 +124,27 @@ async function fetchRatings() {
   );
 
   for (const prof of professors) {
-    const results = await searchProfessor(
-      `${prof.first_name} ${prof.last_name}`,
-    );
-    if (results.length === 0) continue;
+    const fullName = `${prof.first_name} ${prof.last_name}`;
 
-    const { avgRating, numRatings } = results[0].node;
-    await db.execute(
-      `UPDATE Professors SET avg_rating = ?, num_ratings = ? WHERE professor_id = ?`,
-      [avgRating, numRatings, prof.professor_id],
-    );
-    console.log(`Updated ${prof.first_name} ${prof.last_name}: ${avgRating}`);
+    try {
+      const teacher = await searchProfessorAtSJSU(fullName);
+
+      if (!teacher) {
+        console.log(`No SJSU match found for ${fullName}`);
+      } else {
+        const { avgRating } = teacher;
+        await db.execute(
+          `UPDATE Professors SET rating = ? WHERE professor_id = ?`,
+          [avgRating, prof.professor_id],
+        );
+        console.log(`Updated ${fullName}: rating=${avgRating}`);
+      }
+    } catch (err) {
+      console.error(`Failed to fetch rating for ${fullName}:`, err.message);
+    }
+
+    // Pause between requests to avoid rate limiting
+    await delay(1500);
   }
 }
 
