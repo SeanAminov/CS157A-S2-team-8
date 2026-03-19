@@ -43,7 +43,7 @@ npm-debug.log*
 .env.test
 
 # Local test data for scripts
-scripts/test-response.html
+scripts/*.html
 
 # Build/Coverage
 dist
