@@ -23,7 +23,7 @@ DROP TABLE IF EXISTS `Courses`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Courses` (
-  `course_id` int NOT NULL,
+  `course_id` int NOT NULL AUTO_INCREMENT,
   `course_code` varchar(45) NOT NULL,
   `course_name` varchar(45) NOT NULL,
   `credits` varchar(45) NOT NULL,
@@ -183,7 +183,7 @@ DROP TABLE IF EXISTS `Professors`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Professors` (
-  `professor_id` int NOT NULL,
+  `professor_id` int NOT NULL AUTO_INCREMENT,
   `first_name` varchar(45) NOT NULL,
   `last_name` varchar(45) NOT NULL,
   `rating` decimal(2,0) DEFAULT NULL,
@@ -268,7 +268,7 @@ DROP TABLE IF EXISTS `Sections`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Sections` (
-  `section_id` int NOT NULL,
+  `section_id` int NOT NULL AUTO_INCREMENT,
   `term` varchar(45) NOT NULL,
   `days` varchar(45) NOT NULL,
   `start_time` varchar(45) NOT NULL,

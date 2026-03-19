@@ -26,3 +26,32 @@ target/
 
 # Logs
 *.log
+
+# Dependencies
+node_modules/
+jspm_packages/
+.npm
+.yarn/cache
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.test
+
+# Local test data for scripts
+scripts/test-response.html
+
+# Build/Coverage
+dist
+build/Release
+coverage/
+.nyc_output
+
+# IDE/System
+.vscode-test
+.node_repl_history
+.DS_Store
