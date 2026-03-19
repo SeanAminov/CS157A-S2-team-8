@@ -169,19 +169,40 @@ async function fetchCourses() {
       .closest(".ui-collapsible")
       .find(".ui-collapsible-content");
 
-    // Each row in the meeting pattern table is a section
+    // Each row in the meeting pattern table is a section.
+    // The rows always have 11 cells with label prefixes baked into the text:
+    //   0: "Class<num>", 1: "Section<xx-TYPE>\n<Format>", 2: "Days & Times<days+time>",
+    //   3: "Room<location>", 4: "Instructor<name>", 5: "Meeting Dates<dates>",
+    //   6: "Status <open/closed>", 7: empty, 8: "Select", 9: "View Textbooks", 10: "Zero Cost Materials"
     contentDiv.find("tr[id^='trSSR_CLSRCH_MTG1']").each(async (_, row) => {
       const cells = $(row).find("td");
 
-      // Column order observed in PeopleSoft class search results:
-      // 0: Section number, 1: Class number, 2: Days/Times, 3: Room,
-      // 4: Instructor, 5: Dates, 6: Status, 7: Units, 8: Format
-      const sectionNum = $(cells[0]).text().trim();
-      const daysTime = $(cells[2]).text().trim(); // e.g. "MoWeFr 9:00AM-9:50AM"
-      const room = $(cells[3]).text().trim();
-      const instructor = $(cells[4]).text(); // keep newlines so parseInstructorName can split on them
-      const units = $(cells[7]).text().trim();
-      const format = $(cells[8]).text().trim(); // e.g. "In Person"
+      const rawSection = $(cells[1]).text().trim(); // e.g. "Section02-SEM\nRegular" or "Section03-LEC\nIn Person"
+      const rawDaysTime = $(cells[2]).text().trim(); // e.g. "Days & TimesMoWe 6:00PM - 7:15PM"
+      const rawRoom = $(cells[3]).text().trim(); // e.g. "RoomMacQuarrie Hall 233"
+      const rawInstructor = $(cells[4]).text(); // keep newlines so parseInstructorName can split on them
+
+      // Strip label prefixes from cells
+      const sectionNum =
+        rawSection.replace(/^Section/i, "").split(/\s|\n/)[0] || "";
+      const daysTime = rawDaysTime.replace(/^Days\s*&\s*Times/i, "").trim();
+      const room = rawRoom.replace(/^Room/i, "").trim();
+
+      // Derive format from the room value:
+      //   "On Line" (or section number starting with 8x) → Online
+      //   Room cell contains "HY BRID" or "HYBRID" → Hybrid
+      //   anything else → In-Person
+      const roomLower = rawRoom.toLowerCase();
+      const sectionCode =
+        rawSection.replace(/^Section/i, "").split(/\s|\n/)[0] || "";
+      let format;
+      if (/on\s*line/i.test(roomLower) || /^8\d-/.test(sectionCode)) {
+        format = "Online";
+      } else if (/hy\s*brid/i.test(roomLower)) {
+        format = "Hybrid";
+      } else {
+        format = "In-Person";
+      }
 
       if (!sectionNum || !daysTime) return;
 
@@ -198,7 +219,7 @@ async function fetchCourses() {
       if (!startTime) return;
 
       const { firstName: profFirstName, lastName: profLastName } =
-        parseInstructorName(instructor);
+        parseInstructorName(rawInstructor);
 
       try {
         const courseId = await getOrCreateCourse(db, courseCode, courseName);
@@ -231,7 +252,7 @@ async function fetchCourses() {
         insertedSections++;
       } catch (err) {
         console.warn(
-          `  Skipped section for ${courseCode} (${instructor}): ${err.message}`,
+          `  Skipped section for ${courseCode} (${rawInstructor.trim()}): ${err.message}`,
         );
         skippedSections++;
       }

@@ -280,7 +280,7 @@ CREATE TABLE `Sections` (
   `professor_id` int NOT NULL,
   `course_id` int NOT NULL,
   PRIMARY KEY (`section_id`),
-  UNIQUE KEY `uq_section` (`professor_id`, `course_id`, `term`, `days`, `start_time`),
+  UNIQUE KEY `uq_section` (`course_id`, `term`, `days`, `start_time`, `location`),
   KEY `fk_section_course_idx` (`course_id`),
   KEY `fk_section_professor_idx` (`professor_id`),
   CONSTRAINT `fk_section_course` FOREIGN KEY (`course_id`) REFERENCES `Courses` (`course_id`),
