@@ -29,6 +29,7 @@ CREATE TABLE `Courses` (
   `credits` varchar(45) NOT NULL,
   `department_id` int NOT NULL,
   PRIMARY KEY (`course_id`),
+  UNIQUE KEY `uq_courses_course_code` (`course_code`),
   KEY `fk_course_department_idx` (`department_id`),
   CONSTRAINT `fk_course_department` FOREIGN KEY (`department_id`) REFERENCES `Departments` (`department_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

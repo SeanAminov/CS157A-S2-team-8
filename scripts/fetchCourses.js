@@ -26,7 +26,8 @@ const BODY =
   "&ICXPos=0&ICYPos=0&ResponsetoDiffFrame=-1&TargetFrameName=None" +
   "&FacetPath=None&ICFocus=&ICSaveWarningFilter=0&ICChanged=-1" +
   "&ICSkipPending=0&ICAutoSave=0&ICResubmit=0" +
-  "&ICSID=" + encodeURIComponent(process.env.SJSU_ICSID || "") +
+  "&ICSID=" +
+  encodeURIComponent(process.env.SJSU_ICSID || "") +
   "&ICActionPrompt=false&ICPanelName=&ICFind=&ICAddCount=&ICAppClsData=";
 
 /**
@@ -64,13 +65,13 @@ function to24h(timeStr) {
 async function getOrCreateProfessor(db, firstName, lastName) {
   const [rows] = await db.execute(
     "SELECT professor_id FROM Professors WHERE first_name = ? AND last_name = ?",
-    [firstName, lastName]
+    [firstName, lastName],
   );
   if (rows.length > 0) return rows[0].professor_id;
 
   const [result] = await db.execute(
     "INSERT INTO Professors (first_name, last_name, department_id) VALUES (?, ?, ?)",
-    [firstName, lastName, 1]
+    [firstName, lastName, 1],
   );
   return result.insertId;
 }
@@ -81,13 +82,13 @@ async function getOrCreateProfessor(db, firstName, lastName) {
 async function getOrCreateCourse(db, courseCode, courseName) {
   const [rows] = await db.execute(
     "SELECT course_id FROM Courses WHERE course_code = ?",
-    [courseCode]
+    [courseCode],
   );
   if (rows.length > 0) return rows[0].course_id;
 
   const [result] = await db.execute(
     "INSERT INTO Courses (course_code, course_name, credits, department_id) VALUES (?, ?, ?, ?)",
-    [courseCode, courseName, "3", 1]
+    [courseCode, courseName, "3", 1],
   );
   return result.insertId;
 }
@@ -101,7 +102,7 @@ async function fetchCourses() {
   } else {
     if (!process.env.SJSU_COOKIE) {
       throw new Error(
-        "SJSU_COOKIE is not set in .env. Copy fresh cookies from your browser after logging in to MySJSU."
+        "SJSU_COOKIE is not set in .env. Copy fresh cookies from your browser after logging in to MySJSU.",
       );
     }
     console.log("Fetching SJSU class sections...");
@@ -120,7 +121,9 @@ async function fetchCourses() {
     const { courseCode, courseName } = parseCourseTitle(rawTitle);
 
     // Find the collapsible content div that follows this heading
-    const contentDiv = $(el).closest(".ui-collapsible").find(".ui-collapsible-content");
+    const contentDiv = $(el)
+      .closest(".ui-collapsible")
+      .find(".ui-collapsible-content");
 
     // Each row in the meeting pattern table is a section
     contentDiv.find("tr[id^='trSSR_CLSRCH_MTG1']").each(async (_, row) => {
@@ -129,33 +132,39 @@ async function fetchCourses() {
       // Column order observed in PeopleSoft class search results:
       // 0: Section number, 1: Class number, 2: Days/Times, 3: Room,
       // 4: Instructor, 5: Dates, 6: Status, 7: Units, 8: Format
-      const sectionNum  = $(cells[0]).text().trim();
-      const daysTime    = $(cells[2]).text().trim();  // e.g. "MoWeFr 9:00AM-9:50AM"
-      const room        = $(cells[3]).text().trim();
-      const instructor  = $(cells[4]).text().trim();  // e.g. "Smith, John"
-      const units       = $(cells[7]).text().trim();
-      const format      = $(cells[8]).text().trim();  // e.g. "In Person"
+      const sectionNum = $(cells[0]).text().trim();
+      const daysTime = $(cells[2]).text().trim(); // e.g. "MoWeFr 9:00AM-9:50AM"
+      const room = $(cells[3]).text().trim();
+      const instructor = $(cells[4]).text().trim(); // e.g. "Smith, John"
+      const units = $(cells[7]).text().trim();
+      const format = $(cells[8]).text().trim(); // e.g. "In Person"
 
       if (!sectionNum || !daysTime) return;
 
       // Parse days and time range out of daysTime string
-      const timeMatch = daysTime.match(/([A-Za-z]+)\s+([\d:]+[AP]M)-([\d:]+[AP]M)/i);
-      const days      = timeMatch ? timeMatch[1] : daysTime;
+      const timeMatch = daysTime.match(
+        /([A-Za-z]+)\s+([\d:]+[AP]M)-([\d:]+[AP]M)/i,
+      );
+      const days = timeMatch ? timeMatch[1] : daysTime;
       const startTime = timeMatch ? to24h(timeMatch[2]) : null;
-      const endTime   = timeMatch ? to24h(timeMatch[3]) : null;
+      const endTime = timeMatch ? to24h(timeMatch[3]) : null;
 
       // Parse instructor "Last, First" format
       let profFirstName = "Unknown";
-      let profLastName  = instructor;
+      let profLastName = instructor;
       const nameMatch = instructor.match(/^([^,]+),\s*(.+)$/);
       if (nameMatch) {
-        profLastName  = nameMatch[1].trim();
+        profLastName = nameMatch[1].trim();
         profFirstName = nameMatch[2].trim();
       }
 
       try {
         const courseId = await getOrCreateCourse(db, courseCode, courseName);
-        const profId   = await getOrCreateProfessor(db, profFirstName, profLastName);
+        const profId = await getOrCreateProfessor(
+          db,
+          profFirstName,
+          profLastName,
+        );
 
         await db.execute(
           `INSERT INTO Sections (term, days, start_time, end_time, location, format, professor_id, course_id)
@@ -175,11 +184,13 @@ async function fetchCourses() {
             format,
             profId,
             courseId,
-          ]
+          ],
         );
         insertedSections++;
       } catch (err) {
-        console.warn(`  Skipped section for ${courseCode} (${instructor}): ${err.message}`);
+        console.warn(
+          `  Skipped section for ${courseCode} (${instructor}): ${err.message}`,
+        );
         skippedSections++;
       }
     });
@@ -188,7 +199,9 @@ async function fetchCourses() {
   // Give async forEach time to flush (cheerio .each is sync but db calls are async)
   await new Promise((r) => setTimeout(r, 3000));
 
-  console.log(`Done. Inserted/updated: ${insertedSections} sections, skipped: ${skippedSections}`);
+  console.log(
+    `Done. Inserted/updated: ${insertedSections} sections, skipped: ${skippedSections}`,
+  );
 }
 
 module.exports = { fetchCourses };
