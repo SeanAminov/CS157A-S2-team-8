@@ -190,6 +190,7 @@ CREATE TABLE `Professors` (
   `rating` decimal(2,1) DEFAULT NULL,
   `department_id` int NOT NULL,
   PRIMARY KEY (`professor_id`),
+  UNIQUE KEY `uq_professor_name` (`first_name`, `last_name`),
   KEY `fk_professor_department_idx` (`department_id`),
   CONSTRAINT `fk_professor_department` FOREIGN KEY (`department_id`) REFERENCES `Departments` (`department_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

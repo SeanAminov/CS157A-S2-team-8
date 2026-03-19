@@ -204,8 +204,8 @@ async function fetchCourses() {
         const courseId = await getOrCreateCourse(db, courseCode, courseName);
         const profId = await getOrCreateProfessor(
           db,
-          profFirstName,
-          profLastName,
+          profFirstName.trim(),
+          profLastName.trim(),
         );
 
         await db.execute(

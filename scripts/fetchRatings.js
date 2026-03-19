@@ -76,14 +76,15 @@ const SEARCH_QUERY = `
   }
 `;
 
-async function searchProfessorAtSJSU(name) {
+async function searchProfessorAtSJSU(firstName, lastName) {
+  const fullName = `${firstName} ${lastName}`;
   const { data } = await axios.post(
     RMP_GRAPHQL_URL,
     {
       query: SEARCH_QUERY,
       operationName: "TeacherSearchResultsPageQuery",
       variables: {
-        query: { text: name, schoolID: SJSU_SCHOOL_ID, fallback: false },
+        query: { text: fullName, schoolID: SJSU_SCHOOL_ID, fallback: true },
         schoolID: SJSU_SCHOOL_ID,
         includeSchoolFilter: true,
       },
@@ -93,7 +94,7 @@ async function searchProfessorAtSJSU(name) {
         "Content-Type": "application/json",
         Authorization: "null",
         Origin: "https://www.ratemyprofessors.com",
-        Referer: `https://www.ratemyprofessors.com/search/professors/?q=${encodeURIComponent(name)}`,
+        Referer: `https://www.ratemyprofessors.com/search/professors/?q=${encodeURIComponent(fullName)}`,
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
       },
@@ -102,8 +103,16 @@ async function searchProfessorAtSJSU(name) {
 
   const edges = data?.data?.search?.teachers?.edges ?? [];
 
-  // RMP already filters by SJSU school ID, so take the first result
-  return edges[0]?.node ?? null;
+  // still need to match bc rmp returns similar professors
+  const sjsuMatch = edges.find(
+    ({ node }) =>
+      (node.school?.id === SJSU_SCHOOL_ID ||
+        node.school?.name?.toLowerCase().includes("san jose state")) &&
+      node.firstName?.toLowerCase() === firstName.toLowerCase() &&
+      node.lastName?.toLowerCase() === lastName.toLowerCase(),
+  );
+
+  return sjsuMatch ? sjsuMatch.node : 0; // use 0 to represent no review found
 }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -118,7 +127,10 @@ async function fetchRatings() {
     const fullName = `${prof.first_name} ${prof.last_name}`;
 
     try {
-      const teacher = await searchProfessorAtSJSU(fullName);
+      const teacher = await searchProfessorAtSJSU(
+        prof.first_name,
+        prof.last_name,
+      );
 
       if (!teacher) {
         console.log(`No SJSU match found for ${fullName}`);
