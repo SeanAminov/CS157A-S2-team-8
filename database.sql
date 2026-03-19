@@ -25,7 +25,7 @@ DROP TABLE IF EXISTS `Courses`;
 CREATE TABLE `Courses` (
   `course_id` int NOT NULL AUTO_INCREMENT,
   `course_code` varchar(45) NOT NULL,
-  `course_name` varchar(45) NOT NULL,
+  `course_name` varchar(90) NOT NULL,
   `credits` varchar(45) NOT NULL,
   `department_id` int NOT NULL,
   PRIMARY KEY (`course_id`),
