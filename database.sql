@@ -187,7 +187,7 @@ CREATE TABLE `Professors` (
   `professor_id` int NOT NULL AUTO_INCREMENT,
   `first_name` varchar(45) NOT NULL,
   `last_name` varchar(45) NOT NULL,
-  `rating` decimal(2,0) DEFAULT NULL,
+  `rating` decimal(2,1) DEFAULT NULL,
   `department_id` int NOT NULL,
   PRIMARY KEY (`professor_id`),
   KEY `fk_professor_department_idx` (`department_id`),
