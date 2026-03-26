@@ -107,34 +107,32 @@ async function getOrCreateProfessor(db, firstName, lastName) {
     return { firstName: "Unknown", lastName: "Unknown" };
   }
 
+  await db.execute(
+    `INSERT INTO Professors (first_name, last_name, department_id) VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE first_name = first_name`,
+    [firstName, lastName, 1],
+  );
   const [rows] = await db.execute(
     "SELECT professor_id FROM Professors WHERE first_name = ? AND last_name = ?",
     [firstName, lastName],
   );
-  if (rows.length > 0) return rows[0].professor_id;
-
-  const [result] = await db.execute(
-    "INSERT INTO Professors (first_name, last_name, department_id) VALUES (?, ?, ?)",
-    [firstName, lastName, 1],
-  );
-  return result.insertId;
+  return rows[0].professor_id;
 }
 
 /**
  * Gets or inserts a course by course_code, returns course_id.
  */
 async function getOrCreateCourse(db, courseCode, courseName) {
+  await db.execute(
+    `INSERT INTO Courses (course_code, course_name, credits, department_id) VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE course_code = course_code`,
+    [courseCode, courseName, "3", 1],
+  );
   const [rows] = await db.execute(
     "SELECT course_id FROM Courses WHERE course_code = ?",
     [courseCode],
   );
-  if (rows.length > 0) return rows[0].course_id;
-
-  const [result] = await db.execute(
-    "INSERT INTO Courses (course_code, course_name, credits, department_id) VALUES (?, ?, ?, ?)",
-    [courseCode, courseName, "3", 1],
-  );
-  return result.insertId;
+  return rows[0].course_id;
 }
 
 async function fetchCourses() {
@@ -186,7 +184,11 @@ async function fetchCourses() {
       const sectionNum =
         rawSection.replace(/^Section/i, "").split(/\s|\n/)[0] || "";
       const daysTime = rawDaysTime.replace(/^Days\s*&\s*Times/i, "").trim();
-      const room = rawRoom.replace(/^Room/i, "").trim();
+      const room = rawRoom
+        .replace(/^Room/i, "")
+        .replace(/\s*HY\s*BRID\s*/gi, "")
+        .replace(/^(on\s*line\s*)+$/i, "Online")
+        .trim();
 
       // Derive format from the room value:
       //   "On Line" (or section number starting with 8x) → Online
