@@ -1,45 +1,19 @@
-const axios = require("axios");
 const cheerio = require("cheerio");
 const fs = require("fs");
 const path = require("path");
 const { getDb } = require("./db");
 require("dotenv").config();
 
-const SJSU_URL =
-  "https://cmsweb.cms.sjsu.edu/psc/CSJPRD/EMPLOYEE/SA/c/SA_LEARNER_SERVICES.CLASS_SEARCH.GBL";
-
-// These are session-based and will expire. Refresh them by copying a new
-// request from your browser's DevTools (Network tab) after logging in to MySJSU.
-const HEADERS = {
-  accept: "*/*",
-  "accept-language": "en-US,en;q=0.9",
-  "content-type": "application/x-www-form-urlencoded",
-  cookie: process.env.SJSU_COOKIE,
-  Referer: SJSU_URL,
-};
-
-// The POST body copied from the browser request.
-// ICStateNum may need to increment if you chain multiple requests in one session.
-const BODY =
-  "ICAJAX=1&ICNAVTYPEDROPDOWN=1&ICType=Panel&ICElementNum=0&ICStateNum=6" +
-  "&ICAction=%23ICSave&_gs_page=SSR_SS_WARNING&_gs_cs=&ICModelCancel=0" +
-  "&ICXPos=0&ICYPos=0&ResponsetoDiffFrame=-1&TargetFrameName=None" +
-  "&FacetPath=None&ICFocus=&ICSaveWarningFilter=0&ICChanged=-1" +
-  "&ICSkipPending=0&ICAutoSave=0&ICResubmit=0" +
-  "&ICSID=" +
-  encodeURIComponent(process.env.SJSU_ICSID || "") +
-  "&ICActionPrompt=false&ICPanelName=&ICFind=&ICAddCount=&ICAppClsData=";
-
 /**
- * Parses a course title string like "CS 100W - Technical Writing Workshop"
- * into { courseCode: "CS 100W", courseName: "Technical Writing Workshop" }
+ * Parses a course cell text like "CS 157A (Section 01)" into
+ * { courseCode: "CS 157A", sectionNum: "01" }
  */
-function parseCourseTitle(title) {
-  const match = title.match(/^([A-Z]+\s[\w]+)\s*-\s*(.+)$/);
-  if (!match) return { courseCode: title.trim(), courseName: title.trim() };
+function parseCourseCell(text) {
+  const match = text.match(/^([\w]+\s[\w]+)\s*\(Section\s*(\d+)\)$/i);
+  if (!match) return { courseCode: text.trim(), sectionNum: "" };
   return {
     courseCode: match[1].trim(),
-    courseName: match[2].trim(),
+    sectionNum: match[2].trim(),
   };
 }
 
@@ -55,6 +29,64 @@ function to24h(timeStr) {
   if (period.toUpperCase() === "PM" && h !== 12) h += 12;
   if (period.toUpperCase() === "AM" && h === 12) h = 0;
   return `${String(h).padStart(2, "0")}:${m}`;
+}
+
+/**
+ * The schedule file is saved as a Chrome "view-source" page.  Chrome wraps
+ * every line of the original HTML in a <tr><td class="line-number">…</td>
+ * <td class="line-content">…</td></tr> pair.  The content cell contains the
+ * original HTML as a mix of escaped tags (<span class="html-tag">&lt;td&gt;…)
+ * and plain text nodes for the actual cell values.
+ *
+ * Strategy: read the text content of each line-content cell (which strips all
+ * the span wrappers and gives us the visible text of that line), then group
+ * the lines by the original <tr>…</tr> boundaries to reconstruct rows.
+ *
+ * Returns an array of string arrays: each inner array is the text values of
+ * the 14 <td> cells in one course row.
+ */
+function parseCourseRows(viewSourceHtml) {
+  const $ = cheerio.load(viewSourceHtml);
+
+  // Collect the text of every line-content cell in document order.
+  // text() strips all child elements and gives us only the visible characters.
+  const lines = [];
+  $("td.line-content").each((_, el) => {
+    lines.push($(el).text().trim());
+  });
+
+  const rows = [];
+  let current = null;
+
+  for (const line of lines) {
+    if (line === "<tr>") {
+      current = [];
+      continue;
+    }
+    if (line === "</tr>") {
+      if (current && current.length > 0) rows.push(current);
+      current = null;
+      continue;
+    }
+    if (current === null) continue;
+
+    // Lines that are just a tag (e.g. "<td>", "</td>", "<br>") carry no value.
+    // Lines that start with "<td>" and end with "</td>" contain a cell value.
+    const tdMatch = line.match(/^<td>([\s\S]*?)<\/td>$/);
+    if (tdMatch) {
+      // Strip any remaining HTML tags (e.g. <a href="...">text</a>) and decode entities
+      const cellText = tdMatch[1]
+        .replace(/<[^>]+>/g, "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .trim();
+      current.push(cellText);
+    }
+  }
+
+  return rows;
 }
 
 function parseInstructorName(instructorRaw) {
@@ -136,133 +168,111 @@ async function getOrCreateCourse(db, courseCode, courseName) {
 }
 
 async function fetchCourses() {
-  let html;
-  if (process.env.USE_LOCAL === "true") {
-    const localFile = path.join(__dirname, "test-response.html");
-    console.log(`Using local file: ${localFile}`);
-    html = fs.readFileSync(localFile, "utf-8");
-  } else {
-    if (!process.env.SJSU_COOKIE) {
-      throw new Error(
-        "SJSU_COOKIE is not set in .env. Copy fresh cookies from your browser after logging in to MySJSU.",
-      );
-    }
-    console.log("Fetching SJSU class sections...");
-    ({ data: html } = await axios.post(SJSU_URL, BODY, { headers: HEADERS }));
-  }
+  const localFile = path.join(__dirname, "2026_sjsu_spring.php.html");
+  console.log(`Parsing local file: ${localFile}`);
+  const viewSourceHtml = fs.readFileSync(localFile, "utf-8");
 
-  const $ = cheerio.load(html);
+  // Extract rows directly from the Chrome viewer DOM (avoids HTML-reconstruction issues)
+  const courseRows = parseCourseRows(viewSourceHtml);
   const db = await getDb();
 
   let insertedSections = 0;
   let skippedSections = 0;
 
-  // Each course group is a collapsible with an aria-label like "CS 100W - Technical Writing Workshop"
-  $("a.ui-collapsible-heading-toggle[aria-label]").each(async (_, el) => {
-    const rawTitle = $(el).attr("aria-label");
-    const { courseCode, courseName } = parseCourseTitle(rawTitle);
+  // Each row is an array of 14 cell text values:
+  //   0:  "CS 157A (Section 01)"
+  //   1:  class number "26515"
+  //   2:  format "In Person" | "Online" | "Hybrid"
+  //   3:  course name
+  //   4:  notes (usually empty)
+  //   5:  credits " 3.0"
+  //   6:  type "SEM" | "LEC" | "LAB" …
+  //   7:  days "TR" | "MW" | "MWF" …
+  //   8:  time "06:00PM-07:15PM"
+  //   9:  instructor name
+  //  10:  room "SH120"
+  //  11:  dates "01/22/26-05/11/26"
+  //  12:  seats available
+  //  13:  filler
+  const promises = [];
 
-    // Find the collapsible content div that follows this heading
-    const contentDiv = $(el)
-      .closest(".ui-collapsible")
-      .find(".ui-collapsible-content");
+  for (const cells of courseRows) {
+    if (cells.length < 13) continue;
 
-    // Each row in the meeting pattern table is a section.
-    // The rows always have 11 cells with label prefixes baked into the text:
-    //   0: "Class<num>", 1: "Section<xx-TYPE>\n<Format>", 2: "Days & Times<days+time>",
-    //   3: "Room<location>", 4: "Instructor<name>", 5: "Meeting Dates<dates>",
-    //   6: "Status <open/closed>", 7: empty, 8: "Select", 9: "View Textbooks", 10: "Zero Cost Materials"
-    contentDiv.find("tr[id^='trSSR_CLSRCH_MTG1']").each(async (_, row) => {
-      const cells = $(row).find("td");
+    // Course rows always start with "DEPT NNN (Section NN)"
+    const { courseCode, sectionNum } = parseCourseCell(cells[0]);
+    if (!courseCode || !/^[A-Z]/.test(courseCode)) continue;
 
-      const rawSection = $(cells[1]).text().trim(); // e.g. "Section02-SEM\nRegular" or "Section03-LEC\nIn Person"
-      const rawDaysTime = $(cells[2]).text().trim(); // e.g. "Days & TimesMoWe 6:00PM - 7:15PM"
-      const rawRoom = $(cells[3]).text().trim(); // e.g. "RoomMacQuarrie Hall 233"
-      const rawInstructor = $(cells[4]).text(); // keep newlines so parseInstructorName can split on them
+    const rawFormat = cells[2];
+    const courseName = cells[3];
+    const rawDays = cells[7];
+    const rawTime = cells[8]; // "06:00PM-07:15PM"
+    const rawInstructor = cells[9];
+    const room = cells[10];
 
-      // Strip label prefixes from cells
-      const sectionNum =
-        rawSection.replace(/^Section/i, "").split(/\s|\n/)[0] || "";
-      const daysTime = rawDaysTime.replace(/^Days\s*&\s*Times/i, "").trim();
-      const room = rawRoom
-        .replace(/^Room/i, "")
-        .replace(/\s*HY\s*BRID\s*/gi, "")
-        .replace(/^(on\s*line\s*)+$/i, "Online")
-        .trim();
+    // Normalise format
+    let format;
+    if (/online/i.test(rawFormat)) {
+      format = "Online";
+    } else if (/hybrid/i.test(rawFormat)) {
+      format = "Hybrid";
+    } else {
+      format = "In-Person";
+    }
 
-      // Derive format from the room value:
-      //   "On Line" (or section number starting with 8x) → Online
-      //   Room cell contains "HY BRID" or "HYBRID" → Hybrid
-      //   anything else → In-Person
-      const roomLower = rawRoom.toLowerCase();
-      const sectionCode =
-        rawSection.replace(/^Section/i, "").split(/\s|\n/)[0] || "";
-      let format;
-      if (/on\s*line/i.test(roomLower) || /^8\d-/.test(sectionCode)) {
-        format = "Online";
-      } else if (/hy\s*brid/i.test(roomLower)) {
-        format = "Hybrid";
-      } else {
-        format = "In-Person";
-      }
+    // Parse time range "06:00PM-07:15PM"
+    const timeMatch = rawTime.match(/^([\d:]+[AP]M)-([\d:]+[AP]M)$/i);
+    const startTime = timeMatch ? to24h(timeMatch[1]) : null;
+    const endTime = timeMatch ? to24h(timeMatch[2]) : null;
 
-      if (!sectionNum || !daysTime) return;
+    // Skip rows with no scheduled time (TBA, async online, etc.)
+    if (!startTime || !rawDays) continue;
 
-      // Parse days and time range out of daysTime string
-      // HTML format: "MoWe 6:00PM - 7:15PM" (spaces around dash)
-      const timeMatch = daysTime.match(
-        /([A-Za-z]+)\s+([\d:]+[AP]M)\s*-\s*([\d:]+[AP]M)/i,
-      );
-      const days = timeMatch ? timeMatch[1] : daysTime;
-      const startTime = timeMatch ? to24h(timeMatch[2]) : null;
-      const endTime = timeMatch ? to24h(timeMatch[3]) : null;
+    const { firstName: profFirstName, lastName: profLastName } =
+      parseInstructorName(rawInstructor);
 
-      // Skip sections with no scheduled time (TBA, online async, etc.)
-      if (!startTime) return;
+    promises.push(
+      (async () => {
+        try {
+          const courseId = await getOrCreateCourse(db, courseCode, courseName);
+          const profId = await getOrCreateProfessor(
+            db,
+            profFirstName.trim(),
+            profLastName.trim(),
+          );
 
-      const { firstName: profFirstName, lastName: profLastName } =
-        parseInstructorName(rawInstructor);
+          await db.execute(
+            `INSERT INTO Sections (term, days, start_time, end_time, location, format, professor_id, course_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+               days = VALUES(days),
+               start_time = VALUES(start_time),
+               end_time = VALUES(end_time),
+               location = VALUES(location),
+               format = VALUES(format)`,
+            [
+              process.env.SJSU_TERM || "Spring 2026",
+              rawDays,
+              startTime,
+              endTime,
+              room,
+              format,
+              profId,
+              courseId,
+            ],
+          );
+          insertedSections++;
+        } catch (err) {
+          console.warn(
+            `  Skipped section for ${courseCode} §${sectionNum} (${rawInstructor}): ${err.message}`,
+          );
+          skippedSections++;
+        }
+      })(),
+    );
+  }
 
-      try {
-        const courseId = await getOrCreateCourse(db, courseCode, courseName);
-        const profId = await getOrCreateProfessor(
-          db,
-          profFirstName.trim(),
-          profLastName.trim(),
-        );
-
-        await db.execute(
-          `INSERT INTO Sections (term, days, start_time, end_time, location, format, professor_id, course_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE
-             days = VALUES(days),
-             start_time = VALUES(start_time),
-             end_time = VALUES(end_time),
-             location = VALUES(location),
-             format = VALUES(format)`,
-          [
-            process.env.SJSU_TERM || "Spring 2026",
-            days,
-            startTime,
-            endTime,
-            room,
-            format,
-            profId,
-            courseId,
-          ],
-        );
-        insertedSections++;
-      } catch (err) {
-        console.warn(
-          `  Skipped section for ${courseCode} (${rawInstructor.trim()}): ${err.message}`,
-        );
-        skippedSections++;
-      }
-    });
-  });
-
-  // Give async forEach time to flush (cheerio .each is sync but db calls are async)
-  await new Promise((r) => setTimeout(r, 3000));
+  await Promise.all(promises);
 
   console.log(
     `Done. Inserted/updated: ${insertedSections} sections, skipped: ${skippedSections}`,

@@ -44,6 +44,7 @@ npm-debug.log*
 
 # Local test data for scripts
 scripts/*.html
+scripts/*.csv
 
 # Build/Coverage
 dist
