@@ -38,6 +38,42 @@
         <url-pattern>/logout</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>SearchCoursesServlet</servlet-name>
+        <servlet-class>com.fmp.servlet.SearchCoursesServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>SearchCoursesServlet</servlet-name>
+        <url-pattern>/search</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>AddCourseServlet</servlet-name>
+        <servlet-class>com.fmp.servlet.AddCourseServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>AddCourseServlet</servlet-name>
+        <url-pattern>/addCourse</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>ChangePasswordServlet</servlet-name>
+        <servlet-class>com.fmp.servlet.ChangePasswordServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ChangePasswordServlet</servlet-name>
+        <url-pattern>/changePassword</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>DeleteAccountServlet</servlet-name>
+        <servlet-class>com.fmp.servlet.DeleteAccountServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>DeleteAccountServlet</servlet-name>
+        <url-pattern>/deleteAccount</url-pattern>
+    </servlet-mapping>
+
     <session-config>
         <session-timeout>30</session-timeout>
     </session-config>

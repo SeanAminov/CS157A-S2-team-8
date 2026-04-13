@@ -63,9 +63,9 @@
                 <span class="nav-icon">&#128197;</span>
                 Build Schedule
             </a>
-            <a href="#" class="dash-nav-item">
+            <a href="search" class="dash-nav-item">
                 <span class="nav-icon">&#128269;</span>
-                Browse Professors
+                Search Courses
             </a>
             <a href="#" class="dash-nav-item">
                 <span class="nav-icon">&#128218;</span>
@@ -75,12 +75,32 @@
                 <span class="nav-icon">&#128196;</span>
                 Upload Transcript
             </a>
+            <a href="changePassword" class="dash-nav-item">
+                <span class="nav-icon">&#128274;</span>
+                Change Password
+            </a>
             <% if ("admin".equals(userRole)) { %>
             <a href="#" class="dash-nav-item" style="border-color:var(--blue);color:var(--blue);">
                 <span class="nav-icon">&#9881;</span>
                 Admin Panel
             </a>
             <% } %>
+        </div>
+    </div>
+
+        <!-- delete account section -->
+        <div style="margin-top:3rem; padding-top:2rem; border-top:1px solid var(--border);">
+            <h3 style="color:var(--red); font-size:0.95rem; margin-bottom:0.5rem;">Danger Zone</h3>
+            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:1rem;">
+                This will permanently delete your account and all saved data.
+            </p>
+            <form action="deleteAccount" method="post"
+                  onsubmit="return confirm('Are you sure? This cannot be undone.');">
+                <button type="submit" class="btn"
+                        style="background:var(--red); color:white; border-color:var(--red);">
+                    Delete My Account
+                </button>
+            </form>
         </div>
     </div>
 
