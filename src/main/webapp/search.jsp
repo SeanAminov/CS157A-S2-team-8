@@ -8,10 +8,26 @@
         return;
     }
 
+    // search keyword and results from the servlet
     String keyword = (String) request.getAttribute("keyword");
     List<Map<String, Object>> results =
         (List<Map<String, Object>>) request.getAttribute("results");
     String error = (String) request.getAttribute("error");
+
+    // filter dropdown options loaded from the database
+    Map<Integer, String> departments =
+        (Map<Integer, String>) request.getAttribute("departments");
+    List<String> formats =
+        (List<String>) request.getAttribute("formats");
+    List<String> dayOptions =
+        (List<String>) request.getAttribute("dayOptions");
+
+    // currently selected filter values (so dropdowns stay selected after search)
+    String selectedDept   = (String) request.getAttribute("selectedDept");
+    String selectedFormat = (String) request.getAttribute("selectedFormat");
+    String selectedDays   = (String) request.getAttribute("selectedDays");
+    String selectedRating = (String) request.getAttribute("selectedRating");
+    String hideTaken      = (String) request.getAttribute("hideTaken");
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,11 +46,101 @@
         .search-bar {
             display: flex;
             gap: 0.75rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
         .search-bar input {
             flex: 1;
         }
+
+        /* --- filter panel --- */
+        .filter-toggle {
+            background: none;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.45rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            margin-bottom: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .filter-toggle:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+        .filter-toggle.active {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+        .filter-panel {
+            display: none;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        .filter-panel.open {
+            display: block;
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .filter-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--muted);
+            margin-bottom: 0.3rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .filter-group select {
+            width: 100%;
+            padding: 0.45rem 0.7rem;
+            font-size: 0.85rem;
+        }
+        .filter-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border);
+        }
+        .filter-check {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            color: var(--text);
+        }
+        .filter-check input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        .btn-clear-filters {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 0.82rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .btn-clear-filters:hover {
+            color: var(--red);
+        }
+
+        /* --- results table --- */
         .results-table {
             width: 100%;
             border-collapse: collapse;
@@ -96,6 +202,11 @@
             padding: 3rem;
             color: var(--muted);
         }
+        .result-count {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+        }
     </style>
 </head>
 <body>
@@ -121,15 +232,108 @@
             <div class="alert alert-error"><%= error %></div>
         <% } %>
 
-        <!-- search form sends GET to SearchCoursesServlet -->
-        <form action="search" method="get" class="search-bar">
-            <input type="text" name="keyword" class="form-control"
-                   placeholder="e.g. CS157A, Data Structures, Turing..."
-                   value="<%= keyword != null ? keyword : "" %>">
-            <button type="submit" class="btn btn-primary">Search</button>
+        <!-- search form - all filters are GET params so they can be bookmarked -->
+        <form action="search" method="get" id="searchForm">
+            <div class="search-bar">
+                <input type="text" name="keyword" class="form-control"
+                       placeholder="e.g. CS157A, Data Structures, Turing..."
+                       value="<%= keyword != null ? keyword : "" %>">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+
+            <!-- toggle button to show/hide the filter panel -->
+            <%
+                // auto-open filters if any filter is active
+                boolean filtersActive = (selectedDept != null && !selectedDept.isEmpty())
+                    || (selectedFormat != null && !selectedFormat.isEmpty())
+                    || (selectedDays != null && !selectedDays.isEmpty())
+                    || (selectedRating != null && !selectedRating.isEmpty())
+                    || "on".equals(hideTaken);
+            %>
+            <button type="button" class="filter-toggle <%= filtersActive ? "active" : "" %>"
+                    onclick="toggleFilters()">
+                &#9881; Filters
+                <% if (filtersActive) { %><span style="color:var(--blue);">&#8226;</span><% } %>
+            </button>
+
+            <!-- filter panel with dropdowns -->
+            <div class="filter-panel <%= filtersActive ? "open" : "" %>" id="filterPanel">
+                <div class="filter-grid">
+
+                    <!-- department dropdown -->
+                    <div class="filter-group">
+                        <label>Department</label>
+                        <select name="department" class="form-control">
+                            <option value="">All Departments</option>
+                            <% if (departments != null) {
+                                for (Map.Entry<Integer, String> dept : departments.entrySet()) {
+                                    String sel = String.valueOf(dept.getKey()).equals(selectedDept) ? "selected" : "";
+                            %>
+                                <option value="<%= dept.getKey() %>" <%= sel %>><%= dept.getValue() %></option>
+                            <%  }
+                            } %>
+                        </select>
+                    </div>
+
+                    <!-- format dropdown -->
+                    <div class="filter-group">
+                        <label>Format</label>
+                        <select name="format" class="form-control">
+                            <option value="">All Formats</option>
+                            <% if (formats != null) {
+                                for (String fmt : formats) {
+                                    String sel = fmt.equals(selectedFormat) ? "selected" : "";
+                            %>
+                                <option value="<%= fmt %>" <%= sel %>><%= fmt %></option>
+                            <%  }
+                            } %>
+                        </select>
+                    </div>
+
+                    <!-- days dropdown -->
+                    <div class="filter-group">
+                        <label>Days</label>
+                        <select name="days" class="form-control">
+                            <option value="">All Days</option>
+                            <% if (dayOptions != null) {
+                                for (String day : dayOptions) {
+                                    String sel = day.equals(selectedDays) ? "selected" : "";
+                            %>
+                                <option value="<%= day %>" <%= sel %>><%= day %></option>
+                            <%  }
+                            } %>
+                        </select>
+                    </div>
+
+                    <!-- minimum rating dropdown -->
+                    <div class="filter-group">
+                        <label>Min Rating</label>
+                        <select name="minRating" class="form-control">
+                            <option value="">Any Rating</option>
+                            <option value="3.0" <%= "3.0".equals(selectedRating) ? "selected" : "" %>>3.0+</option>
+                            <option value="3.5" <%= "3.5".equals(selectedRating) ? "selected" : "" %>>3.5+</option>
+                            <option value="4.0" <%= "4.0".equals(selectedRating) ? "selected" : "" %>>4.0+</option>
+                            <option value="4.5" <%= "4.5".equals(selectedRating) ? "selected" : "" %>>4.5+</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-actions">
+                    <!-- checkbox to hide courses the user already took -->
+                    <label class="filter-check">
+                        <input type="checkbox" name="hideTaken"
+                               <%= "on".equals(hideTaken) ? "checked" : "" %>>
+                        Hide courses I've already taken
+                    </label>
+                    <button type="button" class="btn-clear-filters" onclick="clearFilters()">
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
         </form>
 
         <% if (results != null && !results.isEmpty()) { %>
+            <p class="result-count"><%= results.size() %> result<%= results.size() != 1 ? "s" : "" %> found</p>
             <table class="results-table">
                 <thead>
                     <tr>
@@ -180,9 +384,9 @@
                 <% } %>
                 </tbody>
             </table>
-        <% } else if (keyword != null) { %>
+        <% } else if (keyword != null || (results != null && results.isEmpty())) { %>
             <div class="no-results">
-                <p>No courses found for "<strong><%= keyword %></strong>". Try a different search.</p>
+                <p>No courses found. Try a different search or adjust your filters.</p>
             </div>
         <% } %>
     </div>
@@ -190,6 +394,27 @@
     <footer class="footer">
         &copy; 2026 FindMyProfessors &mdash; CS157A Team 8
     </footer>
+
+    <script>
+        // toggle the filter panel open/closed
+        function toggleFilters() {
+            var panel = document.getElementById('filterPanel');
+            var btn = document.querySelector('.filter-toggle');
+            panel.classList.toggle('open');
+            btn.classList.toggle('active');
+        }
+
+        // reset all filter dropdowns and uncheck the checkbox, then submit
+        function clearFilters() {
+            var form = document.getElementById('searchForm');
+            form.querySelector('[name="department"]').value = '';
+            form.querySelector('[name="format"]').value = '';
+            form.querySelector('[name="days"]').value = '';
+            form.querySelector('[name="minRating"]').value = '';
+            form.querySelector('[name="hideTaken"]').checked = false;
+            form.submit();
+        }
+    </script>
 
 </body>
 </html>
