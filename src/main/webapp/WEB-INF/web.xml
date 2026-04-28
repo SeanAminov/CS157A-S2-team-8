@@ -66,6 +66,19 @@
     </servlet-mapping>
 
     <servlet>
+        <servlet-name>UploadTranscriptServlet</servlet-name>
+        <servlet-class>com.fmp.servlet.UploadTranscriptServlet</servlet-class>
+        <multipart-config>
+            <max-file-size>5242880</max-file-size>
+            <max-request-size>5242880</max-request-size>
+        </multipart-config>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>UploadTranscriptServlet</servlet-name>
+        <url-pattern>/uploadTranscript</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
         <servlet-name>DeleteAccountServlet</servlet-name>
         <servlet-class>com.fmp.servlet.DeleteAccountServlet</servlet-class>
     </servlet>

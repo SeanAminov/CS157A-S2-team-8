@@ -2,7 +2,6 @@
 build/
 target/
 *.class
-*.jar
 *.war
 
 # IDE - Eclipse

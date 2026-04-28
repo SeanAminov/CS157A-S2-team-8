@@ -71,7 +71,7 @@
                 <span class="nav-icon">&#128218;</span>
                 My Courses
             </a>
-            <a href="#" class="dash-nav-item">
+            <a href="uploadTranscript" class="dash-nav-item">
                 <span class="nav-icon">&#128196;</span>
                 Upload Transcript
             </a>
