@@ -29,9 +29,14 @@ public class AddCourseServlet extends HttpServlet {
         int userId = (Integer) session.getAttribute("userId");
         String courseIdStr = req.getParameter("courseId");
         String keyword = req.getParameter("keyword");
+        String redirectTo = req.getParameter("redirect"); // optional override for where to land after add
+        boolean isAjax = "XMLHttpRequest".equals(req.getHeader("X-Requested-With"));
+
+        String fallback = "myCourses".equals(redirectTo) ? "myCourses"
+                        : "search?keyword=" + (keyword != null ? keyword : "");
 
         if (courseIdStr == null || courseIdStr.isBlank()) {
-            resp.sendRedirect("search?keyword=" + (keyword != null ? keyword : ""));
+            resp.sendRedirect(fallback);
             return;
         }
 
@@ -39,7 +44,7 @@ public class AddCourseServlet extends HttpServlet {
         try {
             courseId = Integer.parseInt(courseIdStr);
         } catch (NumberFormatException e) {
-            resp.sendRedirect("search?keyword=" + (keyword != null ? keyword : ""));
+            resp.sendRedirect(fallback);
             return;
         }
 
@@ -56,8 +61,7 @@ public class AddCourseServlet extends HttpServlet {
 
                 try (ResultSet rs = checkPs.executeQuery()) {
                     if (rs.next()) {
-                        // already in their list, just redirect back
-                        resp.sendRedirect("search?keyword=" + (keyword != null ? keyword : ""));
+                        resp.sendRedirect(fallback);
                         return;
                     }
                 }
@@ -71,10 +75,14 @@ public class AddCourseServlet extends HttpServlet {
             }
 
         } catch (SQLException e) {
+            if (isAjax) { resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); return; }
             req.setAttribute("error", "Could not add course: " + e.getMessage());
         }
 
-        // send them back to search results so they can keep browsing
-        resp.sendRedirect("search?keyword=" + (keyword != null ? keyword : ""));
+        if (isAjax) {
+            resp.setStatus(HttpServletResponse.SC_OK);
+        } else {
+            resp.sendRedirect(fallback);
+        }
     }
 }
