@@ -80,8 +80,8 @@
                 Change Password
             </a>
             <% if ("admin".equals(userRole)) { %>
-            <a href="#" class="dash-nav-item" style="border-color:var(--blue);color:var(--blue);">
-                <span class="nav-icon">&#9881;</span>
+            <a href="adminPanel" class="dash-nav-item" style="border-color:var(--blue);color:var(--blue);">
+                <span class="nav-icon">&#128736;</span>
                 Admin Panel
             </a>
             <% } %>

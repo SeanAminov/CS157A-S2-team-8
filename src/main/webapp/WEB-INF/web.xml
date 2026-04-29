@@ -46,7 +46,17 @@
         <servlet-name>SearchCoursesServlet</servlet-name>
         <url-pattern>/search</url-pattern>
     </servlet-mapping>
+    
+	<servlet>
+    	<servlet-name>AdminPanelServlet</servlet-name>
+    	<servlet-class>com.fmp.servlet.AdminPanelServlet</servlet-class>
+	</servlet>
 
+	<servlet-mapping>
+	    <servlet-name>AdminPanelServlet</servlet-name>
+	    <url-pattern>/adminPanel</url-pattern>
+	</servlet-mapping>
+    
     <servlet>
         <servlet-name>AddCourseServlet</servlet-name>
         <servlet-class>com.fmp.servlet.AddCourseServlet</servlet-class>
