@@ -41,7 +41,7 @@ public class BuildScheduleServlet extends HttpServlet {
 
         try (Connection conn = DBConnection.getConnection()) {
 
-            // 1. Available terms (most recent first)
+            // select available terms (currently just spring 2026)
             List<String> availableTerms = new ArrayList<>();
             try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT DISTINCT term FROM Sections ORDER BY term DESC")) {
@@ -51,7 +51,7 @@ public class BuildScheduleServlet extends HttpServlet {
             }
             if (term == null && !availableTerms.isEmpty()) term = availableTerms.get(0);
 
-            // 2. User's desired courses
+            // select user's desired courses
             List<Map<String, Object>> desiredCourses = new ArrayList<>();
             List<Integer> desiredIds = new ArrayList<>();
             String desiredSql =
@@ -74,7 +74,7 @@ public class BuildScheduleServlet extends HttpServlet {
                 }
             }
 
-            // 3. Sections for each desired course in the selected term
+            // selected all sections based on desired courses
             Map<Integer, List<Map<String, Object>>> courseToSections = new LinkedHashMap<>();
             List<Map<String, Object>> missedCourses = new ArrayList<>();
 
@@ -134,7 +134,7 @@ public class BuildScheduleServlet extends HttpServlet {
                 }
             }
 
-            // 4. Backtracking — find every conflict-free combination (capped at MAX_SCHEDULES)
+            // backtracking — find every conflict free combination (capped at MAX_SCHEDULES)
             List<List<Map<String, Object>>> schedules = new ArrayList<>();
             if (!courseToSections.isEmpty()) {
                 List<List<Map<String, Object>>> sectionsList = new ArrayList<>(courseToSections.values());
