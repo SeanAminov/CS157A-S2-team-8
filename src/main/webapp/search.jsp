@@ -352,7 +352,7 @@
                     BigDecimal rating = (BigDecimal) row.get("rating");
                     String ratingClass = "rating-none";
                     String ratingText = "N/A";
-                    if (rating != null) {
+                    if (rating != null && rating.doubleValue() > 0.0) {
                         double r = rating.doubleValue();
                         ratingText = String.format("%.1f", r);
                         if (r >= 4.0) ratingClass = "rating-good";

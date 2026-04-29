@@ -87,6 +87,33 @@
         <url-pattern>/deleteAccount</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>MyCoursesServlet</servlet-name>
+        <servlet-class>com.fmp.servlet.MyCoursesServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>MyCoursesServlet</servlet-name>
+        <url-pattern>/myCourses</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>RemoveCourseServlet</servlet-name>
+        <servlet-class>com.fmp.servlet.RemoveCourseServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RemoveCourseServlet</servlet-name>
+        <url-pattern>/removeCourse</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>BuildScheduleServlet</servlet-name>
+        <servlet-class>com.fmp.servlet.BuildScheduleServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>BuildScheduleServlet</servlet-name>
+        <url-pattern>/buildSchedule</url-pattern>
+    </servlet-mapping>
+
     <session-config>
         <session-timeout>30</session-timeout>
     </session-config>

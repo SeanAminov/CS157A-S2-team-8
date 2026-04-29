@@ -59,7 +59,7 @@
 
         <!-- Quick actions -->
         <div class="dash-nav">
-            <a href="#" class="dash-nav-item">
+            <a href="buildSchedule" class="dash-nav-item">
                 <span class="nav-icon">&#128197;</span>
                 Build Schedule
             </a>
@@ -67,7 +67,7 @@
                 <span class="nav-icon">&#128269;</span>
                 Search Courses
             </a>
-            <a href="#" class="dash-nav-item">
+            <a href="myCourses" class="dash-nav-item">
                 <span class="nav-icon">&#128218;</span>
                 My Courses
             </a>
