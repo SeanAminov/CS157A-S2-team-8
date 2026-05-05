@@ -374,7 +374,7 @@
                                 <span class="btn-added">Added</span>
                             <% } else { %>
                                 <form action="addCourse" method="post" style="display:inline;">
-                                    <input type="hidden" name="courseId" value="<%= row.get("courseId") %>">
+                                    <input type="hidden" name="sectionId" value="<%= row.get("sectionId") %>">
                                     <input type="hidden" name="keyword" value="<%= keyword != null ? keyword : "" %>">
                                     <button type="submit" class="btn-add">+ Add</button>
                                 </form>

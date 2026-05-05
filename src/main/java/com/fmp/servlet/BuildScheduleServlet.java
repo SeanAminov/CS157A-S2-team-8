@@ -52,11 +52,15 @@ public class BuildScheduleServlet extends HttpServlet {
             if (term == null && !availableTerms.isEmpty()) term = availableTerms.get(0);
 
             // select user's desired courses
+            // changed by SeanAminov: DesiredCourses now uses section_id instead of course_id
+            // join through Sections to get back to Courses
             List<Map<String, Object>> desiredCourses = new ArrayList<>();
             List<Integer> desiredIds = new ArrayList<>();
             String desiredSql =
-                "SELECT c.course_id, c.course_code, c.course_name, c.credits " +
-                "FROM DesiredCourses dc JOIN Courses c ON dc.course_id = c.course_id " +
+                "SELECT DISTINCT c.course_id, c.course_code, c.course_name, c.credits " +
+                "FROM DesiredCourses dc " +
+                "JOIN Sections s ON dc.section_id = s.section_id " +
+                "JOIN Courses c ON s.course_id = c.course_id " +
                 "WHERE dc.user_id = ? ORDER BY c.course_code";
             try (PreparedStatement ps = conn.prepareStatement(desiredSql)) {
                 ps.setInt(1, userId);

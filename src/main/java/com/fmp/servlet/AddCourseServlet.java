@@ -27,37 +27,42 @@ public class AddCourseServlet extends HttpServlet {
         }
 
         int userId = (Integer) session.getAttribute("userId");
-        String courseIdStr = req.getParameter("courseId");
+
+        // accept either sectionId (new) or courseId (legacy) so Daniel's pages still work
+        String sectionIdStr = req.getParameter("sectionId");
+        String courseIdStr  = req.getParameter("courseId");
         String keyword = req.getParameter("keyword");
-        String redirectTo = req.getParameter("redirect"); // optional override for where to land after add
+        String redirectTo = req.getParameter("redirect");
         boolean isAjax = "XMLHttpRequest".equals(req.getHeader("X-Requested-With"));
 
         String fallback = "myCourses".equals(redirectTo) ? "myCourses"
                         : "search?keyword=" + (keyword != null ? keyword : "");
 
-        if (courseIdStr == null || courseIdStr.isBlank()) {
+        // figure out which id was passed
+        String idStr = (sectionIdStr != null && !sectionIdStr.isBlank()) ? sectionIdStr : courseIdStr;
+        if (idStr == null || idStr.isBlank()) {
             resp.sendRedirect(fallback);
             return;
         }
 
-        int courseId;
+        int sectionId;
         try {
-            courseId = Integer.parseInt(courseIdStr);
+            sectionId = Integer.parseInt(idStr);
         } catch (NumberFormatException e) {
             resp.sendRedirect(fallback);
             return;
         }
 
-        // first check if this course is already in the user's desired list
-        String checkSql = "SELECT 1 FROM DesiredCourses WHERE user_id = ? AND course_id = ?";
-        String insertSql = "INSERT INTO DesiredCourses (user_id, course_id) VALUES (?, ?)";
+        // check if this section is already in the user's desired list
+        String checkSql = "SELECT 1 FROM DesiredCourses WHERE user_id = ? AND section_id = ?";
+        String insertSql = "INSERT INTO DesiredCourses (user_id, section_id) VALUES (?, ?)";
 
         try (Connection conn = DBConnection.getConnection()) {
 
-            // see if the user already added this course
+            // see if the user already added this section
             try (PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
                 checkPs.setInt(1, userId);
-                checkPs.setInt(2, courseId);
+                checkPs.setInt(2, sectionId);
 
                 try (ResultSet rs = checkPs.executeQuery()) {
                     if (rs.next()) {
@@ -70,7 +75,7 @@ public class AddCourseServlet extends HttpServlet {
             // not a duplicate, go ahead and insert
             try (PreparedStatement insertPs = conn.prepareStatement(insertSql)) {
                 insertPs.setInt(1, userId);
-                insertPs.setInt(2, courseId);
+                insertPs.setInt(2, sectionId);
                 insertPs.executeUpdate();
             }
 

@@ -92,12 +92,12 @@ public class SearchCoursesServlet extends HttpServlet {
         sql.append("       s.section_id, s.term, s.days, s.start_time, s.end_time, ");
         sql.append("       s.location, s.format, ");
         sql.append("       p.first_name, p.last_name, p.rating, ");
-        sql.append("       CASE WHEN dc.course_id IS NOT NULL THEN 1 ELSE 0 END AS already_added ");
+        sql.append("       CASE WHEN dc.section_id IS NOT NULL THEN 1 ELSE 0 END AS already_added ");
         sql.append("FROM Sections s ");
         sql.append("INNER JOIN Courses c ON s.course_id = c.course_id ");
         sql.append("INNER JOIN Professors p ON s.professor_id = p.professor_id ");
         sql.append("INNER JOIN Departments d ON c.department_id = d.department_id ");
-        sql.append("LEFT JOIN DesiredCourses dc ON dc.course_id = c.course_id AND dc.user_id = ? ");
+        sql.append("LEFT JOIN DesiredCourses dc ON dc.section_id = s.section_id AND dc.user_id = ? ");
 
         // collect PreparedStatement parameters in order
         // first param is always userId for the DesiredCourses LEFT JOIN

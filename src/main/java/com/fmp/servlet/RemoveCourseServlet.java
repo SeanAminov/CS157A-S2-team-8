@@ -26,18 +26,23 @@ public class RemoveCourseServlet extends HttpServlet {
         }
 
         int userId = (Integer) session.getAttribute("userId");
-        String courseIdStr = req.getParameter("courseId");
+        // changed by SeanAminov: DesiredCourses now uses section_id instead of course_id
+        // accept either sectionId (new) or courseId (legacy) parameter name
+        String sectionIdStr = req.getParameter("sectionId");
+        if (sectionIdStr == null || sectionIdStr.isBlank()) {
+            sectionIdStr = req.getParameter("courseId"); // fallback for legacy calls
+        }
         boolean isAjax = "XMLHttpRequest".equals(req.getHeader("X-Requested-With"));
 
-        if (courseIdStr == null || courseIdStr.isBlank()) {
+        if (sectionIdStr == null || sectionIdStr.isBlank()) {
             if (isAjax) { resp.sendError(HttpServletResponse.SC_BAD_REQUEST); return; }
             resp.sendRedirect("myCourses");
             return;
         }
 
-        int courseId;
+        int sectionId;
         try {
-            courseId = Integer.parseInt(courseIdStr);
+            sectionId = Integer.parseInt(sectionIdStr);
         } catch (NumberFormatException e) {
             if (isAjax) { resp.sendError(HttpServletResponse.SC_BAD_REQUEST); return; }
             resp.sendRedirect("myCourses");
@@ -46,9 +51,9 @@ public class RemoveCourseServlet extends HttpServlet {
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                 "DELETE FROM DesiredCourses WHERE user_id = ? AND course_id = ?")) {
+                 "DELETE FROM DesiredCourses WHERE user_id = ? AND section_id = ?")) {
             ps.setInt(1, userId);
-            ps.setInt(2, courseId);
+            ps.setInt(2, sectionId);
             ps.executeUpdate();
         } catch (SQLException e) {
             if (isAjax) { resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); return; }

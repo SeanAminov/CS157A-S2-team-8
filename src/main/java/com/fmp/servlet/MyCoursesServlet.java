@@ -59,13 +59,17 @@ public class MyCoursesServlet extends HttpServlet {
                 }
             }
 
-            // Select every course the user wants
+            // Select every section the user wants
+            // changed by SeanAminov: DesiredCourses now uses section_id instead of course_id
+            // join through Sections to get back to Courses
             List<Map<String, Object>> desiredCourses = new ArrayList<>();
             Set<Integer> desiredCourseIds = new HashSet<>();
             String desiredSql =
-                "SELECT c.course_id, c.course_code, c.course_name, c.credits " +
+                "SELECT c.course_id, c.course_code, c.course_name, c.credits, " +
+                "       dc.section_id " +
                 "FROM DesiredCourses dc " +
-                "JOIN Courses c ON dc.course_id = c.course_id " +
+                "JOIN Sections s ON dc.section_id = s.section_id " +
+                "JOIN Courses c ON s.course_id = c.course_id " +
                 "WHERE dc.user_id = ? " +
                 "ORDER BY c.course_code";
             try (PreparedStatement ps = conn.prepareStatement(desiredSql)) {
