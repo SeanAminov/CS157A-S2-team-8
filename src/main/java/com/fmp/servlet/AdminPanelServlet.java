@@ -264,27 +264,59 @@ public class AdminPanelServlet extends HttpServlet {
   
         HttpSession session = request.getSession(false);
         
+        if (session == null || session.getAttribute("userId") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+        
         String role = (String) session.getAttribute("userRole");
         if (!"admin".equals(role)) {
             response.sendRedirect("dashboard.jsp");
             return;
         }
         
-        int sectionId = Integer.parseInt(request.getParameter("sectionId"));
+        String action = request.getParameter("action");
         String keyword = request.getParameter("keyword");
         
         try (Connection conn = DBConnection.getConnection()) {
-            PreparedStatement stmt = conn.prepareStatement(
-                "DELETE FROM Sections WHERE section_id = ?"
-            );
-            stmt.setInt(1, sectionId);
-            stmt.executeUpdate();
+        	if(action.equals("delete")) {
+                int sectionId = Integer.parseInt(request.getParameter("sectionId"));
+                String sql = "DELETE FROM Sections WHERE section_id = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                	stmt.setInt(1,  sectionId);
+                	stmt.executeUpdate();
+                }
+        	}
+            
+        	else if (action.equals("modify")) {
+        		int sectionId = Integer.parseInt(request.getParameter("sectionId"));
+
+                String days = request.getParameter("days");
+                String startTime = request.getParameter("startTime");
+                String endTime = request.getParameter("endTime");
+                String format = request.getParameter("format");
+                
+                String sql = "UPDATE Sections "
+                           + "SET days = ?, start_time = ?, end_time = ?, format = ? "
+                           + "WHERE section_id = ?";
+
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, days);
+                    stmt.setString(2, startTime);
+                    stmt.setString(3, endTime);
+                    stmt.setString(4, format);
+                    stmt.setInt(5, sectionId);
+                    stmt.executeUpdate();
+                }
+        	}
         } 
         catch (SQLException e) {
             throw new ServletException(e);
         }
         
-        
+        if (keyword == null) {
+        	keyword = "";
+        }
         
         response.sendRedirect("adminPanel?keyword=" + URLEncoder.encode(keyword, "UTF-8"));
     }

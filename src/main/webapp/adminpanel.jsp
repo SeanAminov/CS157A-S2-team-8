@@ -176,6 +176,7 @@
         .rating-ok { background: #fef9c3; color: #854d0e; }
         .rating-low { background: #fef2f2; color: #991b1b; }
         .rating-none { background: #f3f4f6; color: #6b7280; }
+        
         .btn-delete {
             background: var(--red);
             color: white;
@@ -186,7 +187,19 @@
             font-weight: 600;
             cursor: pointer;
         }
-        .btn-add:hover { opacity: 0.9; }
+        
+        
+        .btn-modify {
+            background: var(--blue);
+            color: white;
+            border: none;
+            padding: 0.35rem 0.75rem;
+            border-radius: var(--radius);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 0.1rem;
+        }
         
         .no-results {
             text-align: center;
@@ -198,6 +211,45 @@
             color: var(--muted);
             margin-bottom: 0.75rem;
         }
+        .modal {
+		    display: none;
+		    position: fixed;
+		    z-index: 1000;
+		    left: 0;
+		    top: 0;
+		    width: 100%;
+		    height: 100%;
+		    background: rgba(0,0,0,0.4);
+		}
+		
+		.modal.open {
+		    display: flex;
+		    justify-content: center;
+		    align-items: center;
+		}
+		
+		.modal-content {
+		    background: white;
+		    padding: 1.5rem;
+		    border-radius: var(--radius);
+		    width: 420px;
+		    max-width: 90%;
+		    box-shadow: var(--shadow);
+		}
+		
+		.modal-content label {
+		    display: block;
+		    margin-top: 0.75rem;
+		    font-size: 0.85rem;
+		    font-weight: 600;
+		}
+		
+		.modal-actions {
+		    display: flex;
+		    justify-content: flex-end;
+		    gap: 0.75rem;
+		    margin-top: 1.25rem;
+		}
     </style>
 </head>
 <body>
@@ -364,8 +416,23 @@
                             <% if (added) { %>
                                 <span class="btn-added">Added</span>
                             <% } else { %>
+						        <button type="button" class="btn-modify"
+						            onclick="openModifyModal(
+						                '<%= row.get("sectionId") %>',
+						                '<%= row.get("courseCode") %>',
+						                '<%= row.get("courseName") %>',
+						                '<%= row.get("professor") %>',
+						                '<%= row.get("days") %>',
+						                '<%= row.get("startTime") %>',
+						                '<%= row.get("endTime") %>',
+						                '<%= row.get("format") %>'
+						            )">
+						            Modify
+						        </button> 
+						                                  	
                                 <form action="adminPanel" method="post" style="display:inline;"
                                 	onsubmit="return confirm('Delete this section? This cannot be undone.');">
+                                	
                                     <input type="hidden" name="sectionId" value="<%= row.get("sectionId") %>">
                                     <input type="hidden" name="keyword" value="<%= keyword != null ? keyword : "" %>">
                                     <button type="submit" class="btn-delete">Delete</button>
@@ -406,7 +473,61 @@
             form.querySelector('[name="hideTaken"]').checked = false;
             form.submit();
         }
-    </script>
+        
+        function openModifyModal(sectionId, courseCode, courseName, professor, days, startTime, endTime, format) {
+            document.getElementById('modifySectionId').value = sectionId;
+            document.getElementById('modifyCourseCode').value = courseCode;
+            document.getElementById('modifyCourseName').value = courseName;
+            document.getElementById('modifyProfessor').value = professor;
+            document.getElementById('modifyDays').value = days;
+            document.getElementById('modifyStartTime').value = startTime;
+            document.getElementById('modifyEndTime').value = endTime;
+            document.getElementById('modifyFormat').value = format;
 
+            document.getElementById('modifyModal').classList.add('open');
+        }
+
+        function closeModifyModal() {
+            document.getElementById('modifyModal').classList.remove('open');
+        }
+    </script>
+    
+	<div id="modifyModal" class="modal">
+	    <div class="modal-content">
+	        <h2>Modify Section</h2>
+	
+	        <form action="adminPanel" method="post">
+	            <input type="hidden" name="action" value="modify">
+	            <input type="hidden" name="sectionId" id="modifySectionId">
+	            <input type="hidden" name="keyword" value="<%= keyword != null ? keyword : "" %>">
+	
+	            <label>Course Code</label>
+	            <input type="text" name="courseCode" id="modifyCourseCode" class="form-control">
+	
+	            <label>Course Name</label>
+	            <input type="text" name="courseName" id="modifyCourseName" class="form-control">
+	
+	            <label>Professor</label>
+	            <input type="text" name="professor" id="modifyProfessor" class="form-control">
+	
+	            <label>Days</label>
+	            <input type="text" name="days" id="modifyDays" class="form-control">
+	
+	            <label>Start Time</label>
+	            <input type="text" name="startTime" id="modifyStartTime" class="form-control">
+	
+	            <label>End Time</label>
+	            <input type="text" name="endTime" id="modifyEndTime" class="form-control">
+	
+	            <label>Format</label>
+	            <input type="text" name="format" id="modifyFormat" class="form-control">
+	
+	            <div class="modal-actions">
+	                <button type="button" class="btn btn-outline" onclick="closeModifyModal()">Cancel</button>
+	                <button type="submit" class="btn btn-primary">Save Changes</button>
+	            </div>
+	        </form>
+	    </div>
+	</div>
 </body>
 </html>
