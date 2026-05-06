@@ -85,7 +85,7 @@ public class DeleteAccountServlet extends HttpServlet {
 
         } catch (SQLException e) {
             req.setAttribute("error", "Could not delete account: " + e.getMessage());
-            req.getRequestDispatcher("dashboard.jsp").forward(req, resp);
+            resp.sendRedirect("dashboard");
             return;
         }
 

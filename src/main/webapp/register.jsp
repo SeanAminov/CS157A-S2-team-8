@@ -1,7 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
     if (session.getAttribute("userId") != null) {
-        response.sendRedirect("dashboard.jsp");
+        response.sendRedirect("dashboard");
         return;
     }
     String error = (String) request.getAttribute("error");

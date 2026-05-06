@@ -320,15 +320,12 @@
 <body>
 
 <nav class="navbar">
-    <a href="dashboard.jsp" class="navbar-brand">
+    <a href="dashboard" class="navbar-brand">
         <span class="icon">&#127979;</span>
         FindMyProfessors
     </a>
     <div class="navbar-links">
-        <a href="search">Search</a>
-        <a href="myCourses">My Courses</a>
-        <a href="buildSchedule" style="color:var(--blue);font-weight:700;">Build Schedule</a>
-        <span style="font-size:0.85rem;color:var(--muted);"><%= userEmail %></span>
+        <a href="dashboard">Dashboard</a>
         <a href="logout" class="btn btn-outline btn-sm">Log Out</a>
     </div>
 </nav>

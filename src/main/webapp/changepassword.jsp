@@ -20,12 +20,12 @@
 <body>
 
     <nav class="navbar">
-        <a href="dashboard.jsp" class="navbar-brand">
+        <a href="dashboard" class="navbar-brand">
             <span class="icon">&#127979;</span>
             FindMyProfessors
         </a>
         <div class="navbar-links">
-            <a href="dashboard.jsp">Dashboard</a>
+            <a href="dashboard">Dashboard</a>
             <a href="logout" class="btn btn-outline btn-sm">Log Out</a>
         </div>
     </nav>
@@ -62,7 +62,7 @@
             </form>
 
             <div class="form-footer">
-                <a href="dashboard.jsp">Back to Dashboard</a>
+                <a href="dashboard">Back to Dashboard</a>
             </div>
         </div>
     </div>

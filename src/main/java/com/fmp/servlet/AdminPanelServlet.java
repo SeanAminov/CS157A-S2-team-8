@@ -35,7 +35,7 @@ public class AdminPanelServlet extends HttpServlet {
         
         String role = (String) session.getAttribute("userRole");
         if (!"admin".equals(role)) {
-            resp.sendRedirect("dashboard.jsp");
+            resp.sendRedirect("dashboard");
             return;
         }
 
@@ -271,7 +271,7 @@ public class AdminPanelServlet extends HttpServlet {
         
         String role = (String) session.getAttribute("userRole");
         if (!"admin".equals(role)) {
-            response.sendRedirect("dashboard.jsp");
+            response.sendRedirect("dashboard");
             return;
         }
         
