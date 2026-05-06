@@ -2,7 +2,7 @@
 <%
     // Redirect logged-in users away from login page
     if (session.getAttribute("userId") != null) {
-        response.sendRedirect("dashboard.jsp");
+        response.sendRedirect("dashboard");
         return;
     }
     String error = (String) request.getAttribute("error");

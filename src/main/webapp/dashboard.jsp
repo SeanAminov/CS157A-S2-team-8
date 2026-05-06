@@ -20,14 +20,12 @@
 <body>
 
     <nav class="navbar">
-        <a href="dashboard.jsp" class="navbar-brand">
+        <a href="dashboard" class="navbar-brand">
             <span class="icon">&#127979;</span>
             FindMyProfessors
         </a>
         <div class="navbar-links">
-            <span style="font-size:0.85rem;color:var(--muted);">
-                <%= userEmail %>
-            </span>
+            <a href="dashboard">Dashboard</a>
             <a href="logout" class="btn btn-outline btn-sm">Log Out</a>
         </div>
     </nav>
@@ -40,20 +38,20 @@
 
         <!-- Quick stats -->
         <div class="dashboard-grid">
-            <div class="dash-card">
+            <!-- <div class="dash-card">
                 <h3>My Schedules</h3>
                 <div class="value">0</div>
                 <div class="desc">Saved schedules</div>
-            </div>
+            </div> -->
             <div class="dash-card">
                 <h3>Desired Courses</h3>
-                <div class="value">0</div>
+                <div class="value"><%= request.getAttribute("desiredCount") %></div>
                 <div class="desc">Courses queued</div>
             </div>
             <div class="dash-card">
                 <h3>Credits Completed</h3>
-                <div class="value">—</div>
-                <div class="desc">Upload transcript to track</div>
+                <div class="value"><%= request.getAttribute("creditsCompleted") %></div>
+                <div class="desc">Based on uploaded transcript</div>
             </div>
         </div>
 
@@ -85,24 +83,14 @@
                 Admin Panel
             </a>
             <% } %>
+            <form id="deleteAccountForm" action="deleteAccount" method="post" style="display:none;"></form>
+            <a href="#" class="dash-nav-item" style="border-color:var(--red); color:var(--red);"
+               onclick="if(confirm('Are you sure? This cannot be undone.')) document.getElementById('deleteAccountForm').submit(); return false;">
+                <span class="nav-icon">&#128465;</span>
+                Delete My Account
+            </a>
         </div>
-    </div>
-
-        <!-- delete account section -->
-        <div style="margin-top:3rem; padding-top:2rem; border-top:1px solid var(--border);">
-            <h3 style="color:var(--red); font-size:0.95rem; margin-bottom:0.5rem;">Danger Zone</h3>
-            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:1rem;">
-                This will permanently delete your account and all saved data.
-            </p>
-            <form action="deleteAccount" method="post"
-                  onsubmit="return confirm('Are you sure? This cannot be undone.');">
-                <button type="submit" class="btn"
-                        style="background:var(--red); color:white; border-color:var(--red);">
-                    Delete My Account
-                </button>
-            </form>
-        </div>
-    </div>
+   
 
     <footer class="footer">
         &copy; 2026 FindMyProfessors &mdash; CS157A Team 8
