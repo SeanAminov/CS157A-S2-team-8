@@ -28,7 +28,7 @@ public class DashboardServlet extends HttpServlet {
         int userId = (Integer) session.getAttribute("userId");
 
         int desiredCount = 0;
-        int creditsCompleted = 0;
+        float creditsCompleted = 0;
 
         try (Connection conn = DBConnection.getConnection()) {
 
@@ -41,13 +41,12 @@ public class DashboardServlet extends HttpServlet {
             }
 
             String creditsSql =
-                "SELECT COUNT(*) FROM TakenCourses tc " +
-                "JOIN Transcripts t ON tc.transcript_id = t.transcript_id " +
-                "WHERE t.user_id = ?";
+                "SELECT total_credits FROM Transcripts WHERE user_id = ?";
+             
             try (PreparedStatement ps = conn.prepareStatement(creditsSql)) {
                 ps.setInt(1, userId);
                 try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) creditsCompleted = rs.getInt(1) * 3;
+                    if (rs.next()) creditsCompleted = rs.getFloat(1);
                 }
             }
 
