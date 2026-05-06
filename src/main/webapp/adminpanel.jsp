@@ -435,6 +435,7 @@
                                 	
                                     <input type="hidden" name="sectionId" value="<%= row.get("sectionId") %>">
                                     <input type="hidden" name="keyword" value="<%= keyword != null ? keyword : "" %>">
+                                    <input type="hidden" name="action" value="delete">
                                     <button type="submit" class="btn-delete">Delete</button>
                                 </form>
                             <% } %>
