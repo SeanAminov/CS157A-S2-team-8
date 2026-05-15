@@ -354,7 +354,8 @@ public class AdminPanelServlet extends HttpServlet {
         	            }
         	        }
         	    }
-
+        	    
+        	    
         	    // update the section
         	    String sql = "UPDATE Sections "
         	               + "SET course_id = ?, professor_id = ?, days = ?, start_time = ?, end_time = ?, format = ? "
@@ -450,6 +451,30 @@ public class AdminPanelServlet extends HttpServlet {
 			       ps.setInt(8, courseId);
 			       ps.executeUpdate();
 			   }
+        	}
+        	
+        	else if (action.equals("updateRating")) {
+        	    int sectionId = Integer.parseInt(request.getParameter("sectionId"));
+        	    double rating = Double.parseDouble(request.getParameter("rating"));
+
+        	    // get the professor_id from the section, then update their rating
+        	    String findProf = "SELECT professor_id FROM Sections WHERE section_id = ?";
+        	    int professorId = -1;
+        	    try (PreparedStatement ps = conn.prepareStatement(findProf)) {
+        	        ps.setInt(1, sectionId);
+        	        try (ResultSet rs = ps.executeQuery()) {
+        	            if (rs.next()) professorId = rs.getInt("professor_id");
+        	        }
+        	    }
+
+        	    if (professorId != -1) {
+        	        String updateRating = "UPDATE Professors SET rating = ? WHERE professor_id = ?";
+        	        try (PreparedStatement ps = conn.prepareStatement(updateRating)) {
+        	            ps.setDouble(1, rating);
+        	            ps.setInt(2, professorId);
+        	            ps.executeUpdate();
+        	        }
+        	    }
         	}
         } 
         catch (SQLException e) {
