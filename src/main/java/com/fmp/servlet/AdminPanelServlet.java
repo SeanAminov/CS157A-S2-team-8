@@ -289,25 +289,167 @@ public class AdminPanelServlet extends HttpServlet {
         	}
             
         	else if (action.equals("modify")) {
-        		int sectionId = Integer.parseInt(request.getParameter("sectionId"));
+        	    int sectionId = Integer.parseInt(request.getParameter("sectionId"));
 
-                String days = request.getParameter("days");
-                String startTime = request.getParameter("startTime");
-                String endTime = request.getParameter("endTime");
-                String format = request.getParameter("format");
-                
-                String sql = "UPDATE Sections "
-                           + "SET days = ?, start_time = ?, end_time = ?, format = ? "
-                           + "WHERE section_id = ?";
+        	    String courseCode = request.getParameter("courseCode").trim().toUpperCase();
+        	    String courseName = request.getParameter("courseName").trim();
+        	    String professor  = request.getParameter("professor").trim();
+        	    String days       = request.getParameter("days");
+        	    String startTime  = request.getParameter("startTime");
+        	    String endTime    = request.getParameter("endTime");
+        	    String format     = request.getParameter("format");
+        	    String deptIdParam = request.getParameter("departmentId");
 
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setString(1, days);
-                    stmt.setString(2, startTime);
-                    stmt.setString(3, endTime);
-                    stmt.setString(4, format);
-                    stmt.setInt(5, sectionId);
-                    stmt.executeUpdate();
-                }
+        	    // find or create course
+        	    int courseId = -1;
+        	    String findCourse = "SELECT course_id FROM Courses WHERE course_code = ?";
+        	    try (PreparedStatement ps = conn.prepareStatement(findCourse)) {
+        	        ps.setString(1, courseCode);
+        	        try (ResultSet rs = ps.executeQuery()) {
+        	            if (rs.next()) courseId = rs.getInt("course_id");
+        	        }
+        	    }
+
+        	    if (courseId == -1) {
+        	        int deptId = (deptIdParam != null && !deptIdParam.isEmpty())
+        	                     ? Integer.parseInt(deptIdParam) : 1;
+        	        String insertCourse = "INSERT INTO Courses (course_code, course_name, credits, department_id) VALUES (?, ?, ?, ?)";
+        	        try (PreparedStatement ps = conn.prepareStatement(insertCourse, PreparedStatement.RETURN_GENERATED_KEYS)) {
+        	            ps.setString(1, courseCode);
+        	            ps.setString(2, courseName);
+        	            ps.setInt(3, 3);
+        	            ps.setInt(4, deptId);
+        	            ps.executeUpdate();
+        	            try (ResultSet keys = ps.getGeneratedKeys()) {
+        	                if (keys.next()) courseId = keys.getInt(1);
+        	            }
+        	        }
+        	    }
+
+        	    // find or create professor
+        	    int professorId = -1;
+        	    String[] nameParts = professor.split(" ", 2);
+        	    String firstName = nameParts[0];
+        	    String lastName  = nameParts.length > 1 ? nameParts[1] : "";
+
+        	    String findProf = "SELECT professor_id FROM Professors WHERE first_name = ? AND last_name = ?";
+        	    try (PreparedStatement ps = conn.prepareStatement(findProf)) {
+        	        ps.setString(1, firstName);
+        	        ps.setString(2, lastName);
+        	        try (ResultSet rs = ps.executeQuery()) {
+        	            if (rs.next()) professorId = rs.getInt("professor_id");
+        	        }
+        	    }
+
+        	    if (professorId == -1) {
+        	        String insertProf = "INSERT INTO Professors (first_name, last_name, rating, department_id) VALUES (?, ?, ?, ?)";
+        	        try (PreparedStatement ps = conn.prepareStatement(insertProf, PreparedStatement.RETURN_GENERATED_KEYS)) {
+        	            ps.setString(1, firstName);
+        	            ps.setString(2, lastName);
+        	            ps.setDouble(3, 0.0);
+        	            ps.setInt(4, 1);
+        	            ps.executeUpdate();
+        	            try (ResultSet keys = ps.getGeneratedKeys()) {
+        	                if (keys.next()) professorId = keys.getInt(1);
+        	            }
+        	        }
+        	    }
+
+        	    // update the section
+        	    String sql = "UPDATE Sections "
+        	               + "SET course_id = ?, professor_id = ?, days = ?, start_time = ?, end_time = ?, format = ? "
+        	               + "WHERE section_id = ?";
+        	    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        	        stmt.setInt(1, courseId);
+        	        stmt.setInt(2, professorId);
+        	        stmt.setString(3, days);
+        	        stmt.setString(4, startTime);
+        	        stmt.setString(5, endTime);
+        	        stmt.setString(6, format);
+        	        stmt.setInt(7, sectionId);
+        	        stmt.executeUpdate();
+        	    }
+        	}
+        	
+        	else if (action.equals("add")) {
+        		String term = request.getParameter("term".trim());        	    
+        		String courseCode  = request.getParameter("courseCode").trim().toUpperCase();
+        	    String courseName  = request.getParameter("courseName").trim();
+        	    String professor   = request.getParameter("professor").trim();
+        	    String days        = request.getParameter("days");
+        	    String startTime   = request.getParameter("startTime");
+        	    String endTime     = request.getParameter("endTime");
+        	    String format      = request.getParameter("format");
+        	    String location    = request.getParameter("location");
+        	    String deptIdParam = request.getParameter("departmentId");
+
+        	    int courseId = -1;
+        	    String findCourse = "SELECT course_id FROM Courses WHERE course_code = ?";
+        	    try (PreparedStatement ps = conn.prepareStatement(findCourse)) {
+        	        ps.setString(1, courseCode);
+        	        try (ResultSet rs = ps.executeQuery()) {
+        	            if (rs.next()) courseId = rs.getInt("course_id");
+        	        }
+        	    }
+
+        	    if (courseId == -1) {
+        	        int deptId = (deptIdParam != null && !deptIdParam.isEmpty())
+        	                     ? Integer.parseInt(deptIdParam) : 1;
+        	        String insertCourse = "INSERT INTO Courses (course_code, course_name, credits, department_id) VALUES (?, ?, ?, ?)";
+        	        try (PreparedStatement ps = conn.prepareStatement(insertCourse, PreparedStatement.RETURN_GENERATED_KEYS)) {
+        	            ps.setString(1, courseCode);
+        	            ps.setString(2, courseName);
+        	            ps.setInt(3, 3);
+        	            ps.setInt(4, deptId);
+        	            ps.executeUpdate();
+        	            try (ResultSet keys = ps.getGeneratedKeys()) {
+        	                if (keys.next()) courseId = keys.getInt(1);
+        	            }
+        	        }
+        	    }
+
+        	    int professorId = -1;
+        	    String[] nameParts = professor.split(" ", 2);
+        	    String firstName = nameParts[0];
+        	    String lastName  = nameParts.length > 1 ? nameParts[1] : "";
+
+        	    String findProf = "SELECT professor_id FROM Professors WHERE first_name = ? AND last_name = ?";
+        	    try (PreparedStatement ps = conn.prepareStatement(findProf)) {
+        	        ps.setString(1, firstName);
+        	        ps.setString(2, lastName);
+        	        try (ResultSet rs = ps.executeQuery()) {
+        	            if (rs.next()) professorId = rs.getInt("professor_id");
+        	        }
+        	    }
+
+        	    if (professorId == -1) {
+        	        String insertProf = "INSERT INTO Professors (first_name, last_name, rating, department_id) VALUES (?, ?, ?, ?)";
+        	        try (PreparedStatement ps = conn.prepareStatement(insertProf, PreparedStatement.RETURN_GENERATED_KEYS)) {
+        	            ps.setString(1, firstName);
+        	            ps.setString(2, lastName);
+        	            ps.setDouble(3, 0.0);
+        	            ps.setInt(4, 1);
+
+        	            ps.executeUpdate();
+        	            try (ResultSet keys = ps.getGeneratedKeys()) {
+        	                if (keys.next()) professorId = keys.getInt(1);
+        	            }
+        	        }
+        	    }
+
+        	    String insertSection = "INSERT INTO Sections (term, days, start_time, end_time, location, format, professor_id, course_id) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+			   try (PreparedStatement ps = conn.prepareStatement(insertSection)) {
+			       ps.setString(1, term);
+			       ps.setString(2, days);
+			       ps.setString(3, startTime);
+			       ps.setString(4, endTime);
+			       ps.setString(5, location);
+			       ps.setString(6, format);
+			       ps.setInt(7, professorId);
+			       ps.setInt(8, courseId);
+			       ps.executeUpdate();
+			   }
         	}
         } 
         catch (SQLException e) {

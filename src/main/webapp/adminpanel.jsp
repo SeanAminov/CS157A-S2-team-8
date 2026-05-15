@@ -177,6 +177,26 @@
         .rating-low { background: #fef2f2; color: #991b1b; }
         .rating-none { background: #f3f4f6; color: #6b7280; }
         
+        .btn-add-course {
+		    background: #16a34a;
+		    color: white;
+		    border: none;
+		    padding: 0.5rem 1.1rem;
+		    border-radius: var(--radius);
+		    font-size: 0.88rem;
+		    font-weight: 600;
+		    cursor: pointer;
+		    display: inline-flex;
+		    align-items: center;
+		    gap: 0.4rem;
+		    margin-bottom: 1.25rem;
+		    transition: background 0.15s;<
+		}
+		
+		.btn-add-course:hover {
+		    background: #15803d;
+		}
+		
         .btn-delete {
             background: var(--red);
             color: white;
@@ -275,6 +295,9 @@
             <div class="alert alert-error"><%= error %></div>
         <% } %>
 
+		<button type="button" class="btn-add-course" onclick="openAddModal()">
+		    &#43; Add Course
+		</button>
         <!-- search form - all filters are GET params so they can be bookmarked -->
         <form action="adminPanel" method="get" id="searchForm">
             <div class="search-bar">
@@ -475,6 +498,14 @@
             form.submit();
         }
         
+        function openAddModal() {
+            document.getElementById('addModal').classList.add('open');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.remove('open');
+        }
+        
         function openModifyModal(sectionId, courseCode, courseName, professor, days, startTime, endTime, format) {
             document.getElementById('modifySectionId').value = sectionId;
             document.getElementById('modifyCourseCode').value = courseCode;
@@ -492,43 +523,108 @@
             document.getElementById('modifyModal').classList.remove('open');
         }
     </script>
-    
+    <div id="addModal" class="modal">
+    <div class="modal-content">
+        <h2>Add New Course</h2>
+
+        <form action="adminPanel" method="post">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="keyword" value="<%= keyword != null ? keyword : "" %>">
+			
+			<label>Term</label>
+			<input type="text" name="term" class="form-control" placeholder="e.g. Spring 2026">
+
+            <label>Course Code</label>
+            <input type="text" name="courseCode" class="form-control" placeholder="e.g. CS157A" required>
+
+            <label>Course Name</label>
+            <input type="text" name="courseName" class="form-control" placeholder="e.g. Database Management Systems" required>
+
+            <label>Professor</label>
+            <input type="text" name="professor" class="form-control" placeholder="e.g. Jane Smith" required>
+
+            <label>Days</label>
+            <input type="text" name="days" class="form-control" placeholder="e.g. MW, TuTh, MWF">
+			
+			<label>Location</label>
+			<input type="text" name="location" class="form-control" placeholder="e.g. MH 225, Online">
+
+            <label>Start Time</label>
+            <input type="text" name="startTime" class="form-control" placeholder="e.g. 10:30">
+
+            <label>End Time</label>
+            <input type="text" name="endTime" class="form-control" placeholder="e.g. 11:45">
+
+            <label>Format</label>
+            <select name="format" class="form-control">
+                <option value="">-- Select Format --</option>
+                <% if (formats != null) {
+                    for (String fmt : formats) { %>
+                    <option value="<%= fmt %>"><%= fmt %></option>
+                <%  } } %>
+            </select>
+
+            <label>Department</label>
+            <select name="departmentId" class="form-control">
+                <option value="">-- Select Department --</option>
+                <% if (departments != null) {
+                    for (Map.Entry<Integer, String> dept : departments.entrySet()) { %>
+                    <option value="<%= dept.getKey() %>"><%= dept.getValue() %></option>
+                <%  } } %>
+            </select>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeAddModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Course</button>
+            </div>
+        </form>
+    </div>
+</div>
 	<div id="modifyModal" class="modal">
-	    <div class="modal-content">
-	        <h2>Modify Section</h2>
-	
-	        <form action="adminPanel" method="post">
-	            <input type="hidden" name="action" value="modify">
-	            <input type="hidden" name="sectionId" id="modifySectionId">
-	            <input type="hidden" name="keyword" value="<%= keyword != null ? keyword : "" %>">
-	
-	            <label>Course Code</label>
-	            <input type="text" name="courseCode" id="modifyCourseCode" class="form-control">
-	
-	            <label>Course Name</label>
-	            <input type="text" name="courseName" id="modifyCourseName" class="form-control">
-	
-	            <label>Professor</label>
-	            <input type="text" name="professor" id="modifyProfessor" class="form-control">
-	
-	            <label>Days</label>
-	            <input type="text" name="days" id="modifyDays" class="form-control">
-	
-	            <label>Start Time</label>
-	            <input type="text" name="startTime" id="modifyStartTime" class="form-control">
-	
-	            <label>End Time</label>
-	            <input type="text" name="endTime" id="modifyEndTime" class="form-control">
-	
-	            <label>Format</label>
-	            <input type="text" name="format" id="modifyFormat" class="form-control">
-	
-	            <div class="modal-actions">
-	                <button type="button" class="btn btn-outline" onclick="closeModifyModal()">Cancel</button>
-	                <button type="submit" class="btn btn-primary">Save Changes</button>
-	            </div>
-	        </form>
-	    </div>
-	</div>
+    <div class="modal-content">
+        <h2>Modify Section</h2>
+
+        <form action="adminPanel" method="post">
+            <input type="hidden" name="action" value="modify">
+            <input type="hidden" name="sectionId" id="modifySectionId">
+            <input type="hidden" name="keyword" value="<%= keyword != null ? keyword : "" %>">
+
+            <label>Course Code</label>
+            <input type="text" name="courseCode" id="modifyCourseCode" class="form-control">
+
+            <label>Course Name</label>
+            <input type="text" name="courseName" id="modifyCourseName" class="form-control">
+
+            <label>Professor</label>
+            <input type="text" name="professor" id="modifyProfessor" class="form-control">
+
+            <label>Department</label>
+            <select name="departmentId" class="form-control">
+                <option value="">-- Select Department --</option>
+                <% if (departments != null) {
+                    for (Map.Entry<Integer, String> dept : departments.entrySet()) { %>
+                    <option value="<%= dept.getKey() %>"><%= dept.getValue() %></option>
+                <%  } } %>
+            </select>
+
+            <label>Days</label>
+            <input type="text" name="days" id="modifyDays" class="form-control">
+
+            <label>Start Time</label>
+            <input type="text" name="startTime" id="modifyStartTime" class="form-control">
+
+            <label>End Time</label>
+            <input type="text" name="endTime" id="modifyEndTime" class="form-control">
+
+            <label>Format</label>
+            <input type="text" name="format" id="modifyFormat" class="form-control">
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeModifyModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
 </body>
 </html>
